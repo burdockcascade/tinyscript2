@@ -1,0 +1,14 @@
+function ignore_this_function()
+    assert false
+end
+
+function speak(msg)
+    var a = 1
+    assert a == 1
+    assert msg == "hello"
+end
+
+speak("hello", "i should not work")
+func2()
+
+function func2() assert true end
