@@ -1,0 +1,12 @@
+class math
+end
+
+function math:max()
+
+end
+
+function min:max()
+
+end
+
+var me = person()

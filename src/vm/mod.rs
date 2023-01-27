@@ -9,8 +9,6 @@ use crate::vm::value::Value::{Null, ReturnFrame, ReturnPosition};
 pub mod value;
 pub mod program;
 
-const RETURN_POSITION_INDEX: i32 = 1;
-const RETURN_FRAME_INDEX: i32 = 2;
 const LOCAL_VARIABLE_OFFSET: i32 = 2;
 
 pub struct VM {
@@ -33,7 +31,7 @@ impl VM {
         }
     }
 
-    pub fn exec(mut self, parameters: Value, entry_function: &str) -> Result<Value, String> {
+    pub fn exec(mut self, parameters: Value) -> Result<Value, String> {
 
         info!("Executing program");
         debug!("program started with {} instructions", self.instructions.len());
@@ -41,12 +39,6 @@ impl VM {
         self.stack.push(Value::ReturnPosition(-1));
         self.stack.push(Value::ReturnFrame(-1));
         self.stack.push(parameters);
-
-        // if self.functions.contains_key(entry_function) {
-        //     debug!("starting at function {}", entry_function);
-        //     self.instructions[0] = Instruction::Call(entry_function.parse().unwrap(), 1);
-        // }
-
 
         trace!("{:?}", self.instructions);
 
@@ -79,11 +71,13 @@ impl VM {
 
                 // FUNCTIONS
 
-                Instruction::Call(name, arg_len) => {
+                Instruction::Call(arg_len) => {
+
+                    let name = self.stack.pop().expect("function ref should be on the stack");
 
                     trace!("> calling '{}' with {} args", name, arg_len);
 
-                    let func = self.functions.get(name).expect(&*format!("function '{}' not found", name));
+                    let func = self.functions.get(name.to_string().as_str()).expect(&*format!("function '{}' not found", name));
 
                     // cut args
                     let split_at = self.stack.len() - *arg_len as usize;
@@ -402,7 +396,7 @@ mod test {
         };
 
         let vm: VM = VM::new(program);
-        let v = vm.exec(Value::Array(vec![]), "main").expect("err");
+        let v = vm.exec(Value::Array(vec![])).expect("err");
 
         assert_eq!(v, Value::Integer(16))
 
@@ -421,7 +415,7 @@ mod test {
         };
 
         let vm: VM = VM::new(program);
-        let v = vm.exec(Value::Array(vec![]), "main").expect("err");
+        let v = vm.exec(Value::Array(vec![])).expect("err");
 
         assert_eq!(v, Value::Integer(3))
 

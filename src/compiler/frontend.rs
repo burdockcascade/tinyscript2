@@ -6,8 +6,11 @@ pub enum Token {
     Assert(Box<Token>),
     Import(String),
     Print(Box<Token>),
+    Comment(String),
 
     Function(Box<Token>, Vec<Token>, Vec<Token>),
+    AnonFunction(Vec<Token>, Vec<Token>),
+    Class(Box<Token>, Vec<Token>),
     Identifier(String),
 
     Null,
@@ -20,7 +23,6 @@ pub enum Token {
     Array(Vec<Token>),
 
     Dictionary(Vec<Token>),
-    DictionaryKey(String, Vec<String>),
     KeyValuePair(String, Box<Token>),
 
     Index(Box<Token>, Vec<Token>),
@@ -69,6 +71,8 @@ parser!(pub grammar parser() for str {
 
     rule statement() -> Token
         = WHITESPACE() e:(
+            import() /
+            class() /
             var() /
             print() /
             assignment() /
@@ -84,10 +88,16 @@ parser!(pub grammar parser() for str {
         ) WHITESPACE() { e }
 
     rule import() -> Token
-        = "import(" _ s:string() _ ")" WHITESPACE() { Token::Import(s) }
+        = "import" _ s:string() _ NEWLINE() { Token::Import(s) }
 
     rule assert() -> Token
         = "assert" _ e:expression() WHITESPACE() { Token::Assert(Box::new(e)) }
+
+    rule class() -> Token
+        = "class" _ i:identifier() WHITESPACE()
+        items:(WHITESPACE() t:(var() / function()) WHITESPACE() { t })*
+        "end"
+    { Token::Class(Box::new(i), items) }
 
     rule print() -> Token
         = "print" _ e:expression() WHITESPACE() { Token::Print(Box::new(e)) }
@@ -97,6 +107,12 @@ parser!(pub grammar parser() for str {
             stmts:statements() WHITESPACE()
             "end" WHITESPACE()
         { Token::Function(Box::new(name), params, stmts) }
+
+    rule closure() -> Token
+        = "function(" params:((_ i:identifier() _ {i}) ** ",") ")" WHITESPACE()
+            stmts:statements() WHITESPACE()
+            "end" WHITESPACE()
+        { Token::AnonFunction(params, stmts) }
 
     rule call() -> Token
         = i:identifier() "(" args:((_ e:expression() _ {e}) ** ",") ")" { Token::Call(Box::new(i), args) }
@@ -189,6 +205,7 @@ parser!(pub grammar parser() for str {
         / "\"" s:string() "\"" { Token::String(s) }
         / list()
         / json()
+        / c:closure() { c }
 
     rule _() =  quiet!{[' ' | '\t']*}
     rule NEWLINE() = quiet!{ ['\n'|'\r'] }

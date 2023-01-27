@@ -25,7 +25,7 @@ pub enum Instruction {
     ArrayLength,
 
     // Instructions
-    Call(String, i32),
+    Call(i32),
     Jump(i32),
     JumpIfTrue(i32),
     JumpIfFalse(i32),

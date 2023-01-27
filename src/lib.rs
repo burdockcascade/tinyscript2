@@ -1,3 +1,5 @@
+extern crate core;
+
 use log::LevelFilter;
 use simplelog::{ColorChoice, Config, TerminalMode, TermLogger};
 
@@ -33,5 +35,5 @@ pub fn compile_and_run(program: &str, params: Value) -> Result<Value, String> {
     let vm: VM = VM::new(bytecode);
 
     // Execute
-    vm.exec(params, "main").map_err(|e| e.to_string())
+    vm.exec(params).map_err(|e| e.to_string())
 }

@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::fs;
+use std::hash::Hash;
 use log::{debug, error, info, trace};
 
 use crate::compiler::frontend::Token;
@@ -16,8 +18,7 @@ pub struct Compiler {
 struct Function {
     name: String,
     instructions: Vec<Instruction>,
-    variables: HashMap<String, i32>,
-    parentfunc: usize
+    variables: HashMap<String, i32>
 }
 
 
@@ -34,14 +35,14 @@ impl Compiler {
         info!("Compiling program");
 
         // Start with root statements
-        self.compile_function(Box::new(Token::Identifier(String::from("__root"))), vec![Token::Identifier(String::from("argv"))], script);
+        self.compile_function(&Box::new(Token::Identifier(String::from("__root"))), vec![Token::Identifier(String::from("argv"))].as_slice(), script.as_slice());
+
+        info!("Compiling program");
 
         let mut p = Program {
             instructions: vec![],
             functions: Default::default(),
         };
-
-        info!("Compiling program");
 
         // Compile function instructions into one program
         for mut func in self.functions {
@@ -64,15 +65,19 @@ impl Compiler {
         Ok(p)
     }
 
+    fn compile_class(&mut self, name: Box<Token>, items: Vec<Token>) {
 
-    fn compile_function(&mut self, name: Box<Token>, params: Vec<Token>, statements: Vec<Token>) {
+        trace!("found class {} with {} items", name.to_string(), items.len());
+
+    }
+
+    fn compile_function(&mut self, name: &Box<Token>, params: &[Token], statements: &[Token]) {
 
         self.curfunc = self.functions.len();
         let f = Function {
             name: name.to_string(),
             instructions: vec![],
-            variables: HashMap::default(),
-            parentfunc: self.curfunc,
+            variables: HashMap::default()
         };
         self.functions.push(f);
 
@@ -107,40 +112,53 @@ impl Compiler {
 
     }
 
-    fn compile_statements(&mut self, statements: Vec<Token>) {
+    fn compile_statements(&mut self, statements: &[Token]) {
 
         for statement in statements {
             match statement {
+                Token::Import(file) => self.import_file(file),
                 Token::Assert(exp) => self.compile_assert(exp),
                 Token::Print(exp) => self.compile_print(exp),
-                Token::Call(name, args) => self.compile_call(name, &args),
+                Token::Call(name, args) => self.compile_call(name, args),
                 Token::Variable(name, token) => self.compile_variable(name, token),
                 Token::Assign(name, token) => self.compile_assignment(name, token),
-                Token::Function(name, params, statements) => self.compile_function(name, params, statements),
+                Token::Function(name, params, statements) => self.compile_function(name, params.as_slice(), statements.as_slice()),
                 Token::IfElse(expr, then_body, else_body) => self.compile_ifelse(expr, then_body, else_body),
                 Token::WhileLoop(expr, statements) => self.compile_whileloop(expr, statements),
                 Token::ForEach(item, array, stmts) => self.compile_foreach(item, array, stmts),
                 Token::Return(expr) => self.compile_return(expr),
                 Token::ForI(name, from, to, step, stmts) => self.compile_forloop(name, from, to, step, stmts),
+                // Token::Class(name, vars) => self.compile_class(name, vars),
                 _ => todo!()
             }
         }
 
     }
 
-    fn compile_assert(&mut self, exp: Box<Token>) {
-        self.compile_expression(&exp);
+    fn import_file(&mut self, file: &String) {
+
+        debug!("Importing {}", file);
+        let imported_script = fs::read_to_string(file).expect("Unable to read file");
+
+        let script: Vec<Token> = frontend::parser::script(&imported_script).map_err(|e| e.to_string()).expect("err");
+
+        self.compile_statements(script.as_slice());
+
+    }
+
+    fn compile_assert(&mut self, exp: &Box<Token>) {
+        self.compile_expression(exp);
         self.functions[self.curfunc].instructions.push(Instruction::Assert);
     }
 
-    fn compile_variable(&mut self, name: Box<Token>, value: Box<Token>) {
+    fn compile_variable(&mut self, name: &Box<Token>, value: &Box<Token>) {
         self.compile_assignment(name, value);
     }
 
-    fn compile_assignment(&mut self, name: Box<Token>, token: Box<Token>) {
+    fn compile_assignment(&mut self, name: &Box<Token>, token: &Box<Token>) {
 
         // push variant onto stack
-        self.compile_expression(&token);
+        self.compile_expression(token);
 
         // Assign variable to slot
         let index = self.get_variable(name.to_string());
@@ -150,7 +168,7 @@ impl Compiler {
         self.functions[self.curfunc].instructions.push(i);
     }
 
-    fn compile_forloop(&mut self, name: Box<Token>, from: Box<Token>, to: Box<Token>, optional_step: Option<Box<Token>>, block: Vec<Token>) {
+    fn compile_forloop(&mut self, name: &Box<Token>, from: &Box<Token>, to: &Box<Token>, optional_step: &Option<Box<Token>>, block: &[Token]) {
 
         trace!("compiling for loop");
 
@@ -204,7 +222,7 @@ impl Compiler {
 
     }
 
-    fn compile_foreach(&mut self, item: Box<Token>, array: Box<Token>, block: Vec<Token>) {
+    fn compile_foreach(&mut self, item: &Box<Token>, array: &Box<Token>, block: &[Token]) {
         trace!("compiling for each");
 
         // Find or create variables
@@ -252,7 +270,7 @@ impl Compiler {
         // self.funcstack[self.scope].instructions.push(Instruction::StackPop(2));
     }
 
-    fn compile_whileloop(&mut self, expr: Box<Token>, block: Vec<Token>) {
+    fn compile_whileloop(&mut self, expr: &Box<Token>, block: &[Token]) {
         trace!("compiling while loop");
 
         // Mark instruction pointer
@@ -278,7 +296,7 @@ impl Compiler {
 
     }
 
-    fn compile_ifelse(&mut self, expr: Box<Token>, then_body: Vec<Token>, else_body: Option<Vec<Token>>) {
+    fn compile_ifelse(&mut self, expr: &Box<Token>, then_body: &[Token], else_body: &Option<Vec<Token>>) {
         trace!("compiling ifelse");
 
         // Compile If Statement
@@ -300,7 +318,7 @@ impl Compiler {
         match else_body {
             None => {}
             Some(els) => {
-                let _ = self.compile_statements(els);
+                let _ = self.compile_statements(els.as_slice());
             }
         }
 
@@ -311,6 +329,15 @@ impl Compiler {
 
     fn compile_expression(&mut self, token: &Token) {
         match token {
+
+            // todo
+            Token::AnonFunction(params, statements) => {
+
+                let func_name = format!("closure{}", self.functions[self.curfunc].instructions.len());
+                self.compile_function(&Box::new(Token::Identifier(func_name.clone())), params, statements);
+                self.functions[self.curfunc].instructions.push(Instruction::Push(Value::FunctionRef(func_name)));
+            }
+
             Token::Null => {
                 trace!("pushing {:?} onto stack", token);
                 self.functions[self.curfunc].instructions.push(Instruction::Push(Value::Null));
@@ -367,7 +394,7 @@ impl Compiler {
             }
 
             Token::Call(name, args) => {
-                self.compile_call(name.clone(), args);
+                self.compile_call(name, args);
             }
 
             Token::Eq(t1, t2) => {
@@ -440,21 +467,28 @@ impl Compiler {
         }
     }
 
-    fn compile_print(&mut self, exp: Box<Token>) {
+    fn compile_print(&mut self, exp: &Box<Token>) {
         self.compile_expression(&exp);
         self.functions[self.curfunc].instructions.push(Instruction::Print);
     }
 
-    fn compile_call(&mut self, name: Box<Token>, args: &Vec<Token>) {
+    fn compile_call(&mut self, name: &Box<Token>, args: &Vec<Token>) {
         let arg_len = args.len();
 
-        trace!("call to function '{:?}' with {} args", name, arg_len);
+        trace!("call to function '{:?}' with {} args", name.to_string(), arg_len);
 
         for arg in args {
             self.compile_expression(arg);
         }
 
-        self.functions[self.curfunc].instructions.push(Instruction::Call(name.to_string(), arg_len as i32));
+        if self.functions[self.curfunc].variables.contains_key(&*name.to_string()) {
+            let index = self.get_variable(name.to_string());
+            self.functions[self.curfunc].instructions.push(Instruction::LoadLocalVariable(index))
+        } else {
+            self.functions[self.curfunc].instructions.push(Instruction::Push(Value::FunctionRef(name.to_string())))
+        }
+
+        self.functions[self.curfunc].instructions.push(Instruction::Call(arg_len as i32));
     }
 
     fn map_array_items(&self, elements: &Vec<Token>) -> Value {
@@ -499,8 +533,8 @@ impl Compiler {
         return Value::Dictionary(dict);
     }
 
-    fn compile_return(&mut self, expr: Box<Token>) {
-        self.compile_expression(&expr);
+    fn compile_return(&mut self, expr: &Box<Token>) {
+        self.compile_expression(expr);
         self.functions[self.curfunc].instructions.push(Instruction::ReturnValue);
     }
 

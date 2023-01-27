@@ -15,19 +15,7 @@ pub enum Value {
     Dictionary(HashMap<String, Value>),
     ReturnPosition(i32),
     ReturnFrame(i32),
-    Function(i32),
-    Debug(String)
-}
-
-impl Value {
-    fn length(&self) -> i32 {
-        match self {
-            Value::String(string) => return string.len() as i32,
-            Value::Array(val) => return val.len() as i32,
-            Value::Dictionary(dic) => return dic.len() as i32,
-            _ => unimplemented!(),
-        }
-    }
+    FunctionRef(String)
 }
 
 impl Display for Value {
@@ -39,6 +27,7 @@ impl Display for Value {
             Value::Bool(b) => write!(f, "{b}"),
             Value::String(string) => write!(f, "{string}"),
             Value::Array(_val) => write!(f, "Array"),
+            Value::FunctionRef(name) => write!(f, "{name}"),
             _ => write!(f, "todo"),
         }
     }
@@ -112,6 +101,18 @@ impl Div for Value {
             (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 / v2 as f32),
             (Value::Float(v1), Value::Float(v2)) => Value::Float(v1 / v2),
             _ => unreachable!("can not add values")
+        }
+    }
+}
+
+impl Not for Value {
+    type Output = Value;
+
+    fn not(self) -> Self::Output {
+        match self {
+            Value::Bool(true) => Value::Bool(false),
+            Value::Bool(false) => Value::Bool(true),
+            _ => Value::Bool(false),
         }
     }
 }
