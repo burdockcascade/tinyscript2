@@ -108,7 +108,7 @@ parser!(pub grammar parser() for str {
             "end" WHITESPACE()
         { Token::Function(Box::new(name), params, stmts) }
 
-    rule closure() -> Token
+    rule anonfunc() -> Token
         = "function(" params:((_ i:identifier() _ {i}) ** ",") ")" WHITESPACE()
             stmts:statements() WHITESPACE()
             "end" WHITESPACE()
@@ -205,7 +205,7 @@ parser!(pub grammar parser() for str {
         / "\"" s:string() "\"" { Token::String(s) }
         / list()
         / json()
-        / c:closure() { c }
+        / c:anonfunc() { c }
 
     rule _() =  quiet!{[' ' | '\t']*}
     rule NEWLINE() = quiet!{ ['\n'|'\r'] }

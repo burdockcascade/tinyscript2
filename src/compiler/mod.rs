@@ -332,7 +332,6 @@ impl Compiler {
 
             // todo
             Token::AnonFunction(params, statements) => {
-
                 let func_name = format!("closure{}", self.functions[self.curfunc].instructions.len());
                 self.compile_function(&Box::new(Token::Identifier(func_name.clone())), params, statements);
                 self.functions[self.curfunc].instructions.push(Instruction::Push(Value::FunctionRef(func_name)));
