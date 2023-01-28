@@ -23,6 +23,8 @@ pub enum Instruction {
     // Arrays
     LoadArrayIndex,
     ArrayLength,
+    ArrayPack,
+    DictionaryPack,
 
     // Instructions
     Call(i32),

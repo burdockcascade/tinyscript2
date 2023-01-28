@@ -6,16 +6,22 @@ use std::ops::{Add, Div, Mul, Not, Sub};
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Value {
+
     Null,
+
     Integer(i32),
     Float(f32),
     Bool(bool),
     String(String),
     Array(Vec<Value>),
     Dictionary(HashMap<String, Value>),
+
     ReturnPosition(i32),
     ReturnFrame(i32),
-    FunctionRef(String)
+
+    IndexPath(Vec<Value>),
+    FunctionRef(String),
+    VariableRef(i32)
 }
 
 impl Display for Value {
@@ -72,6 +78,7 @@ impl Add for Value {
             (Value::String(v1), Value::Bool(v2)) => Value::String(v1.add(&*v2.to_string())),
             (Value::String(v1), Value::Integer(v2)) => Value::String(v1.add(&*v2.to_string())),
             (Value::String(v1), Value::Float(v2)) => Value::String(v1.add(&*v2.to_string())),
+            (Value::Array(v1), Value::Array(v2)) => Value::Array([v1, v2].concat()),
             _ => unreachable!("can not add values")
         }
     }
@@ -86,7 +93,7 @@ impl Mul for Value {
             (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f32 * v2),
             (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 * v2 as f32),
             (Value::Float(v1), Value::Float(v2)) => Value::Float(v1 * v2),
-            _ => unreachable!("can not add values")
+            _ => unreachable!("can not multiply values")
         }
     }
 }
@@ -100,7 +107,7 @@ impl Div for Value {
             (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f32 / v2),
             (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 / v2 as f32),
             (Value::Float(v1), Value::Float(v2)) => Value::Float(v1 / v2),
-            _ => unreachable!("can not add values")
+            _ => unreachable!("can not divide values")
         }
     }
 }

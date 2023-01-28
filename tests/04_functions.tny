@@ -1,6 +1,11 @@
+function i_do_nothing()
+end
+
 function func1(bool)
     assert bool
 end
+
+function ignore_me() end
 
 func1(true)
 
@@ -9,3 +14,39 @@ var f = function(bool)
 end
 
  f(true)
+
+ var x = f
+ x(true)
+
+function execute(fn)
+    fn(true)
+end
+
+execute(function(bool)
+    assert true
+end)
+
+execute(f)
+execute(x)
+
+function loopy(b)
+    var b_count = 0
+
+    for item in b do
+        assert true
+        assert item >= 1
+        assert item <= 9
+        b_count = b_count + 1
+    end
+end
+
+loopy([1,2,4,5,7,8,9])
+
+var class = {
+    "f1": function(bool)
+        assert bool
+    end
+}
+
+var cf = class["f1"]
+cf(true)

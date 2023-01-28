@@ -122,6 +122,7 @@ impl Compiler {
                 Token::Call(name, args) => self.compile_call(name, args),
                 Token::Variable(name, token) => self.compile_variable(name, token),
                 Token::Assign(name, token) => self.compile_assignment(name, token),
+                Token::IndexAssign(name, indexes, token) => self.compile_index_assignment(name, indexes, token),
                 Token::Function(name, params, statements) => self.compile_function(name, params.as_slice(), statements.as_slice()),
                 Token::IfElse(expr, then_body, else_body) => self.compile_ifelse(expr, then_body, else_body),
                 Token::WhileLoop(expr, statements) => self.compile_whileloop(expr, statements),
@@ -152,13 +153,41 @@ impl Compiler {
     }
 
     fn compile_variable(&mut self, name: &Box<Token>, value: &Box<Token>) {
+
+        if self.functions[self.curfunc].variables.contains_key(name.to_string().as_str()) {
+            error!("variable {} has already been declared", name.to_string());
+        }
+
+        // Declare variable
+        self.get_variable(name.to_string());
+
+        // Compile variable value
         self.compile_assignment(name, value);
     }
 
-    fn compile_assignment(&mut self, name: &Box<Token>, token: &Box<Token>) {
+    fn compile_index_assignment(&mut self, name: &Box<Token>, indexes: &[Token], exp: &Box<Token>) {
+        trace!("assigning value {} to {} index of {}", exp.to_string(), indexes[0].to_string(), name.to_string());
+
+        let idx = self.get_variable(name.to_string());
+        self.functions[self.curfunc].instructions.push(Instruction::LoadLocalVariable(idx));
+
+        for index in indexes {
+            self.compile_expression(index);
+            self.functions[self.curfunc].instructions.push(Instruction::LoadArrayIndex);
+        }
+
+        self.compile_expression(exp);
+
+    }
+
+    fn compile_assignment(&mut self, name: &Box<Token>, exp: &Box<Token>) {
+
+        if !self.functions[self.curfunc].variables.contains_key(name.to_string().as_str()) {
+            error!("variable {} has not been declared", name.to_string());
+        }
 
         // push variant onto stack
-        self.compile_expression(token);
+        self.compile_expression(exp);
 
         // Assign variable to slot
         let index = self.get_variable(name.to_string());
@@ -327,12 +356,14 @@ impl Compiler {
         self.functions[self.curfunc].instructions[jump_to_end] = Instruction::Jump(jump_to_pos as i32);
     }
 
+
+
     fn compile_expression(&mut self, token: &Token) {
         match token {
 
             // todo
             Token::AnonFunction(params, statements) => {
-                let func_name = format!("closure{}", self.functions[self.curfunc].instructions.len());
+                let func_name = format!("func{}", self.functions[self.curfunc].instructions.len());
                 self.compile_function(&Box::new(Token::Identifier(func_name.clone())), params, statements);
                 self.functions[self.curfunc].instructions.push(Instruction::Push(Value::FunctionRef(func_name)));
             }
@@ -364,13 +395,34 @@ impl Compiler {
 
             Token::Identifier(id) => {
                 let idx = self.get_variable(id.clone());
-                let i = Instruction::LoadLocalVariable(idx);
-                self.functions[self.curfunc].instructions.push(i);
+                self.functions[self.curfunc].instructions.push(Instruction::LoadLocalVariable(idx));
             }
 
             Token::Array(elements) => {
-                let i = Instruction::Push(self.map_array_items(elements));
-                self.functions[self.curfunc].instructions.push(i);
+
+                // Create empty array
+                self.functions[self.curfunc].instructions.push(Instruction::Push(Value::Array(vec![])));
+
+                for element in elements {
+                    self.compile_expression(element);
+                    self.functions[self.curfunc].instructions.push(Instruction::ArrayPack);
+                }
+
+            }
+
+            Token::Dictionary(pairs) => {
+
+                // Create empty array
+                self.functions[self.curfunc].instructions.push(Instruction::Push(Value::Dictionary(HashMap::default())));
+
+                for pair in pairs {
+                    if let Token::KeyValuePair(k, value) = pair {
+                        self.functions[self.curfunc].instructions.push(Instruction::Push(Value::String(k.to_string())));
+                        self.compile_expression(value);
+                        self.functions[self.curfunc].instructions.push(Instruction::DictionaryPack);
+                    }
+                }
+
             }
 
             Token::Index(id, indexes) => {
@@ -385,11 +437,6 @@ impl Compiler {
                     self.compile_expression(index);
                     self.functions[self.curfunc].instructions.push(Instruction::LoadArrayIndex);
                 }
-            }
-
-            Token::Dictionary(assignments) => {
-                let d = self.map_dict_items(assignments);
-                self.functions[self.curfunc].instructions.push(Instruction::Push(d));
             }
 
             Token::Call(name, args) => {
@@ -488,48 +535,6 @@ impl Compiler {
         }
 
         self.functions[self.curfunc].instructions.push(Instruction::Call(arg_len as i32));
-    }
-
-    fn map_array_items(&self, elements: &Vec<Token>) -> Value {
-        let mut array = Vec::with_capacity(elements.len());
-
-        for element in elements {
-            match element {
-                Token::Integer(v) => array.push(Value::Integer(*v)),
-                Token::Float(v) => array.push(Value::Float(*v)),
-                Token::Bool(v) => array.push(Value::Bool(*v)),
-                Token::String(v) => array.push(Value::String(v.to_string())),
-                Token::Array(v) => array.push(self.map_array_items(v)),
-                Token::Dictionary(v) => array.push(self.map_dict_items(v)),
-                _ => unreachable!()
-            }
-        }
-
-        return Value::Array(array);
-    }
-
-    fn map_dict_items(&self, key_value_pairs: &Vec<Token>) -> Value {
-        let mut dict = HashMap::with_capacity(key_value_pairs.len());
-
-        for key_value in key_value_pairs {
-            match key_value {
-                Token::KeyValuePair(key, value) => {
-                    match &**value {
-                        Token::Integer(v) => { dict.insert(key.clone(), Value::Integer(*v)); }
-                        Token::Float(v) => { dict.insert(key.clone(), Value::Float(*v)); }
-                        Token::Bool(v) => { dict.insert(key.clone(), Value::Bool(*v)); }
-                        Token::String(v) => { dict.insert(key.clone(), Value::String(v.to_string())); }
-                        Token::Array(v) => { dict.insert(key.clone(), self.map_array_items(&v)); }
-                        Token::Dictionary(v) => { dict.insert(key.clone(), self.map_dict_items(&v)); }
-                        _ => error!("Value not supported in dictionary")
-                    }
-                }
-
-                _ => error!("Token not supported in dictionary")
-            }
-        }
-
-        return Value::Dictionary(dict);
     }
 
     fn compile_return(&mut self, expr: &Box<Token>) {

@@ -6,7 +6,6 @@ pub enum Token {
     Assert(Box<Token>),
     Import(String),
     Print(Box<Token>),
-    Comment(String),
 
     Function(Box<Token>, Vec<Token>, Vec<Token>),
     AnonFunction(Vec<Token>, Vec<Token>),
@@ -26,7 +25,7 @@ pub enum Token {
     KeyValuePair(String, Box<Token>),
 
     Index(Box<Token>, Vec<Token>),
-    ArrayIndexAssign(Box<Token>, Vec<Token>, Box<Token>),
+    IndexAssign(Box<Token>, Vec<Token>, Box<Token>),
 
     Eq(Box<Token>, Box<Token>),
     Ne(Box<Token>, Box<Token>),
@@ -76,7 +75,7 @@ parser!(pub grammar parser() for str {
             var() /
             print() /
             assignment() /
-            array_assigment() /
+            index_assigment() /
             assert() /
             call() /
             function() /
@@ -123,8 +122,8 @@ parser!(pub grammar parser() for str {
     rule assignment() -> Token
         = i:identifier() _ "=" _ e:expression() {  Token::Assign(Box::new(i), Box::new(e)) }
 
-    rule array_assigment() -> Token
-        = i:identifier() indexes:("[" e:expression() "]" { e })+  _ "=" _ e:expression()  { Token::ArrayIndexAssign(Box::new(i), indexes, Box::new(e)) }
+    rule index_assigment() -> Token
+        = i:identifier() indexes:("[" e:expression() "]" { e })+  _ "=" _ e:expression()  { Token::IndexAssign(Box::new(i), indexes, Box::new(e)) }
 
     rule if_else() -> Token
         = "if" _ e:expression() WHITESPACE() "{" WHITESPACE() then_body:statements() WHITESPACE() "}" WHITESPACE()

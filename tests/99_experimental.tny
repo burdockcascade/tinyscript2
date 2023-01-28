@@ -1,0 +1,10 @@
+
+var a = {
+    "color": "red",
+    "year": 2022,
+    "cold": true,
+    "func1": function()
+        assert true
+    end
+}
+

@@ -18,6 +18,9 @@ var f = [1, false, 4.5, "hello", { "color" : "red"}]
 var f2 = f[2]
 assert f2 == 4.5
 
+var f[1] = true
+assert f[1]
+
 var g = {
     "name" : "peter",
     "age" : 43,
@@ -39,3 +42,9 @@ assert m3 == 4
 
 var m4 = 8 / 4
 assert m4 == 2
+
+var func1 = function(bool)
+    assert bool
+end
+
+func1(true)

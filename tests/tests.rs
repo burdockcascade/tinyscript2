@@ -30,3 +30,8 @@ fn classes() {
 fn imports() {
     assert_eq!(compile_and_run(include_str!("10_imports.tny"), Value::Array(vec![])).unwrap(), Value::Null);
 }
+
+#[test]
+fn experimental() {
+    assert_eq!(compile_and_run(include_str!("99_experimental.tny"), Value::Array(vec![])).unwrap(), Value::Null);
+}

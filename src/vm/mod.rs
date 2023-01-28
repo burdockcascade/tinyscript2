@@ -228,6 +228,30 @@ impl VM {
 
                 // ARRAYS
 
+                Instruction::ArrayPack => {
+                    let (array, value) = self.pop_2_values();
+
+                    if let Value::Array(mut v) = array {
+                        v.push(value);
+                        self.stack.push(Value::Array(v));
+                    }
+
+                    self.ip += 1;
+
+                }
+
+                Instruction::DictionaryPack => {
+                    let (key, value) = self.pop_2_values();
+                    let dict = self.stack.pop().expect("dictionary should be on the stack");
+
+                    if let Value::Dictionary(mut v) = dict {
+                        v.insert(key.to_string(), value);
+                        self.stack.push(Value::Dictionary(v));
+                    }
+
+                    self.ip += 1;
+                }
+
                 Instruction::LoadArrayIndex => {
                     let (v, index) = self.pop_2_values();
                     trace!("looking up {:?} in {:?}", index, v);
@@ -239,7 +263,7 @@ impl VM {
                             self.stack.push(item);
                         },
                         (Value::Dictionary(keys), Value::String(key)) => {
-                            let item = keys.get(&*key).expect("key does not exist").clone();
+                            let item = keys.get(&*key).expect(&*format!("key {} does not exist in dictionary", key.as_str())).clone();
                             self.stack.push(item);
                         }
                         _ => {
