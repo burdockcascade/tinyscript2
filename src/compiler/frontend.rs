@@ -62,7 +62,7 @@ parser!(pub grammar parser() for str {
 
     pub rule script() -> Vec<Token>
         = WHITESPACE() f:(
-            statement()*
+            function()*
         ) WHITESPACE() { f }
 
     rule statements() -> Vec<Token>

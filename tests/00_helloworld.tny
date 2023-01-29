@@ -1,2 +1,4 @@
-print "hello world"
-assert true
+function main(argv)
+    print "hello world"
+    assert true
+end

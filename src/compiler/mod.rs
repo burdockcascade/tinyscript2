@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use std::hash::Hash;
-use log::{debug, error, info, trace};
+use log::{debug, error, trace};
 
 use crate::compiler::frontend::Token;
 use crate::vm::program::{Instruction, Program};
@@ -18,11 +17,13 @@ pub struct Compiler {
 struct Function {
     name: String,
     instructions: Vec<Instruction>,
-    variables: HashMap<String, i32>
+    variables: HashMap<String, i32>,
+    parent_function: i32
 }
 
 
 impl Compiler {
+
     pub fn new() -> Self {
         Compiler {
             functions: vec![],
@@ -32,12 +33,13 @@ impl Compiler {
 
     pub fn compile(mut self, script: Vec<Token>) -> Result<Program, String> {
 
-        info!("Compiling program");
+        debug!("Converting script to bytecode");
+        self.compile_statements(script.as_slice());
 
         // Start with root statements
-        self.compile_function(&Box::new(Token::Identifier(String::from("__root"))), vec![Token::Identifier(String::from("argv"))].as_slice(), script.as_slice());
+        // self.compile_function(&Box::new(Token::Identifier(String::from("__root"))), vec![Token::Identifier(String::from("argv"))].as_slice(), script.as_slice());
 
-        info!("Compiling program");
+        debug!("Compiling program");
 
         let mut p = Program {
             instructions: vec![],
@@ -45,22 +47,13 @@ impl Compiler {
         };
 
         // Compile function instructions into one program
-        for mut func in self.functions {
-
+        for func in self.functions {
             debug!("compiling func {} with {} instructions and {} vars", func.name, func.instructions.len(), func.variables.len());
-
-            if func.name == "__root" {
-                func.instructions.push(Instruction::Halt(String::from("eof")));
-            }
-
             p.functions.insert(func.name.clone(), p.instructions.len() as i32);
-            trace!("{:?}", func.instructions);
-
             p.instructions.extend(func.instructions);
-
         }
 
-        debug!("program is {:?}", p.instructions);
+        trace!("program is {:?}", p.instructions);
 
         Ok(p)
     }
@@ -73,15 +66,18 @@ impl Compiler {
 
     fn compile_function(&mut self, name: &Box<Token>, params: &[Token], statements: &[Token]) {
 
-        self.curfunc = self.functions.len();
         let f = Function {
             name: name.to_string(),
             instructions: vec![],
-            variables: HashMap::default()
+            variables: HashMap::default(),
+            parent_function: self.curfunc as i32,
         };
-        self.functions.push(f);
 
-        trace!("new function '{:?}' ({}) discovered with {} parameters", self.functions[self.curfunc].name, self.curfunc, params.len());
+        self.functions.push(f);
+        self.curfunc = self.functions.len() - 1;
+
+        trace!("===");
+        trace!("new function '{:?}' ({} ({})) discovered with {} parameters", self.functions[self.curfunc].name, self.curfunc, self.functions[self.curfunc].parent_function, params.len());
 
         let pos = self.functions[self.curfunc].instructions.len() as i32;
         let sz = self.functions[self.curfunc].variables.len() as i32;
@@ -106,7 +102,7 @@ impl Compiler {
         trace!("end of function definition for '{:?}' ({})", name, self.curfunc);
 
 
-        self.curfunc = 0;
+        self.curfunc = self.functions[self.curfunc].parent_function as usize;
         trace!("switching to  function definition '{:?}' ({})", self.functions[self.curfunc].name, self.curfunc);
 
 

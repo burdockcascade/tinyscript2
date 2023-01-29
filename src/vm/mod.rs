@@ -31,10 +31,14 @@ impl VM {
         }
     }
 
-    pub fn exec(mut self, parameters: Value) -> Result<Value, String> {
+    pub fn exec(mut self, entry: String, parameters: Value) -> Result<Value, String> {
 
         info!("Executing program");
         debug!("program started with {} instructions", self.instructions.len());
+
+        if self.functions.contains_key(entry.as_str()) {
+            self.ip = *self.functions.get(entry.as_str()).expect("no entry found");
+        }
 
         self.stack.push(Value::ReturnPosition(-1));
         self.stack.push(Value::ReturnFrame(-1));
