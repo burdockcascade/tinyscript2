@@ -173,7 +173,7 @@ impl Compiler {
 
         for index in indexes {
             self.compile_expression(index);
-            self.functions[self.curfunc].instructions.push(Instruction::LoadArrayIndex);
+            self.functions[self.curfunc].instructions.push(Instruction::LoadIndexedValue);
         }
 
         self.compile_expression(exp);
@@ -275,7 +275,7 @@ impl Compiler {
         // Update item value
         self.functions[self.curfunc].instructions.push(Instruction::LoadLocalVariable(array));
         self.functions[self.curfunc].instructions.push(Instruction::LoadLocalVariable(array_idx));
-        self.functions[self.curfunc].instructions.push(Instruction::LoadArrayIndex);
+        self.functions[self.curfunc].instructions.push(Instruction::LoadIndexedValue);
         self.functions[self.curfunc].instructions.push(Instruction::StoreLocalVariable(item));
 
         // Compile statements inside loop block
@@ -405,7 +405,7 @@ impl Compiler {
 
                 for element in elements {
                     self.compile_expression(element);
-                    self.functions[self.curfunc].instructions.push(Instruction::ArrayPack);
+                    self.functions[self.curfunc].instructions.push(Instruction::ArrayAdd);
                 }
 
             }
@@ -419,7 +419,7 @@ impl Compiler {
                     if let Token::KeyValuePair(k, value) = pair {
                         self.functions[self.curfunc].instructions.push(Instruction::Push(Value::String(k.to_string())));
                         self.compile_expression(value);
-                        self.functions[self.curfunc].instructions.push(Instruction::DictionaryPack);
+                        self.functions[self.curfunc].instructions.push(Instruction::DictionaryAdd);
                     }
                 }
 
@@ -435,7 +435,7 @@ impl Compiler {
 
                 for index in indexes {
                     self.compile_expression(index);
-                    self.functions[self.curfunc].instructions.push(Instruction::LoadArrayIndex);
+                    self.functions[self.curfunc].instructions.push(Instruction::LoadIndexedValue);
                 }
             }
 

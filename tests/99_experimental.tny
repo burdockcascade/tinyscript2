@@ -1,10 +1,7 @@
+var f = [1, false, 4.5, "hello", { "color" : "red"}]
 
-var a = {
-    "color": "red",
-    "year": 2022,
-    "cold": true,
-    "func1": function()
-        assert true
-    end
-}
+f2 = f[2]
+assert f2 == 4.5
 
+f[1] = true
+assert f[1]

@@ -20,11 +20,11 @@ pub enum Instruction {
     ExtendStackSize(i32),
     StackPop(i32),
 
-    // Arrays
-    LoadArrayIndex,
+    // Arrays & Dictionaries
+    LoadIndexedValue,
     ArrayLength,
-    ArrayPack,
-    DictionaryPack,
+    ArrayAdd,
+    DictionaryAdd,
 
     // Instructions
     Call(i32),

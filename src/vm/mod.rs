@@ -228,7 +228,7 @@ impl VM {
 
                 // ARRAYS
 
-                Instruction::ArrayPack => {
+                Instruction::ArrayAdd => {
                     let (array, value) = self.pop_2_values();
 
                     if let Value::Array(mut v) = array {
@@ -240,24 +240,12 @@ impl VM {
 
                 }
 
-                Instruction::DictionaryPack => {
-                    let (key, value) = self.pop_2_values();
-                    let dict = self.stack.pop().expect("dictionary should be on the stack");
+                Instruction::LoadIndexedValue => {
 
-                    if let Value::Dictionary(mut v) = dict {
-                        v.insert(key.to_string(), value);
-                        self.stack.push(Value::Dictionary(v));
-                    }
-
-                    self.ip += 1;
-                }
-
-                Instruction::LoadArrayIndex => {
                     let (v, index) = self.pop_2_values();
                     trace!("looking up {:?} in {:?}", index, v);
 
                     match (v, index) {
-
                         (Value::Array(items), Value::Integer(idx)) => {
                             let item = items[idx as usize].clone();
                             self.stack.push(item);
@@ -265,12 +253,11 @@ impl VM {
                         (Value::Dictionary(keys), Value::String(key)) => {
                             let item = keys.get(&*key).expect(&*format!("key {} does not exist in dictionary", key.as_str())).clone();
                             self.stack.push(item);
-                        }
+                        },
                         _ => {
                             error!("variable has no index");
                             break;
                         }
-
                     }
 
                     self.ip += 1;
@@ -283,11 +270,22 @@ impl VM {
                     match v {
                         Value::Array(val) => self.stack.push(Value::Integer(val.len() as i32)),
                         _ => unreachable!("can not get length on non-array {}", v)
-
                     }
 
                     self.ip += 1;
 
+                }
+
+                Instruction::DictionaryAdd => {
+                    let (key, value) = self.pop_2_values();
+                    let dict = self.stack.pop().expect("dictionary should be on the stack");
+
+                    if let Value::Dictionary(mut v) = dict {
+                        v.insert(key.to_string(), value);
+                        self.stack.push(Value::Dictionary(v));
+                    }
+
+                    self.ip += 1;
                 }
 
                 // ARITHMETIC
@@ -390,6 +388,10 @@ impl VM {
 
         Ok(self.stack.pop().or(Option::from(Value::Null)).unwrap())
 
+    }
+
+    fn pop_1_value(&mut self) -> Value {
+        return self.stack.pop().expect("no 1st value on ops stack");
     }
 
     fn pop_2_values(&mut self) -> (Value, Value) {
