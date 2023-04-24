@@ -1,4 +1,5 @@
-function main(argv)
-    print "hello world"
-    assert true
-end
+function main(argv) {
+    var msg = "hello world";
+    print msg;
+    assert msg == "hello world";
+}

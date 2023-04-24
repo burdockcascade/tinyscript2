@@ -1,56 +1,56 @@
-function i_do_nothing()
-    assert false
-end
+function i_do_nothing() {
+    assert false;
+}
 
-function func1(bool)
-    assert bool
-end
+function func1(bool, ignore_this_param) {
+    assert bool;
+}
 
-function ignore_me() assert false end
+function ignore_me() { assert false; }
 
-function execute(fn)
-    fn(true)
-end
+function execute(fn) {
+    fn(true);
+}
 
-function loopy(b)
-    var b_count = 0
+function loopy(b) {
+    var b_count = 0;
 
-    for item in b do
-        assert item >= 1
-        assert item <= 9
-        b_count = b_count + 1
-    end
-end
-
-function main(argv)
-
-    loopy([1,2,4,5,7,8,9])
-
-    func1(true)
-
-    var f = function(bool)
-        assert bool
-    end
-
-    f(true)
-
-    var x = f
-    x(true)
-
-    execute(f)
-    execute(x)
-
-    execute(function(bool)
-        assert true
-    end)
-
-    var class = {
-        "f1": function(bool)
-            assert bool
-        end
+    for (item in b) {
+        assert item <= 9;
+        assert item >= 1;
+        b_count = b_count + 1;
     }
+}
 
-    var cf = class["f1"]
-    cf(true)
+function main(argv) {
 
-end
+    loopy([1,2,4,5,7,8,9]);
+
+    func1(true, false);
+
+    var f = function(bool) {
+        assert bool;
+    };
+
+    f(true);
+
+    var x = f;
+    x(true);
+
+    execute(f);
+    execute(x);
+
+    execute(function(bool) {
+        assert true;
+    });
+
+    var table = {
+        "f1": function(bool) {
+            assert bool;
+        }
+    };
+
+    var func1 = table["f1"];
+    func1(true);
+
+}

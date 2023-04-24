@@ -1,49 +1,50 @@
-function main()
-    var a = 1
-    assert a == 1
 
-    var b = 2.2
-    assert b == 2.2
+function main() {
 
-    var c = true
-    assert c
+    var a_var_with_no_value;
 
-    var d = false
-    assert d == false
+    var a = 1;
+    assert a == 1;
 
-    var e = "hello"
-    assert e == "hello"
+    var b = 2.2;
+    assert b == 2.2;;;;;
 
-    var f = [1, false, 4.5, "hello", { "color" : "red"}]
+    var c = true;
+    assert c;;
 
-    f2 = f[2]
-    assert f2 == 4.5
+    var d = false;
+    assert d == false;
+
+    var e = "hello";
+    assert e == "hello";
+
+    var f = [1, false, 4.5, "hello", { "color" : "red"}];
+
+    print f[3];
+
+    var f2 = f[2];
+    assert f2 == 4.5;
 
     var g = {
         "name" : "peter",
         "age" : 43,
         "gender" : true,
         "numbers": [1,3,5,7,3]
-    }
+    };
 
-    var g2 = g["name"]
-    assert g2 == "peter"
+    var g2 = g["name"];
+    assert g2 == "peter";
 
-    var m1 = 1 + 1
-    assert m1 == 2
+    var m1 = 1 + 1;
+    assert m1 == 2;
 
-    var m2 = 3 * 2
-    assert m2 == 6
+    var m2 = 3 * 2;
+    assert m2 == 6;
 
-    var m3 = 5 - 1
-    assert m3 == 4
+    var m3 = 5 - 1;
+    assert m3 == 4;
 
-    var m4 = 8 / 4
-    assert m4 == 2
+    var m4 = 8 / 4;
+    assert m4 == 2;
 
-    var func1 = function(bool)
-        assert bool
-    end
-
-    func1(true)
-end
+}

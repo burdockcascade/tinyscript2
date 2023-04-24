@@ -3,6 +3,9 @@ use peg::parser;
 #[derive(Debug, Clone)]
 pub enum Token {
 
+    NoOp,
+
+    Comment(String),
     Assert(Box<Token>),
     Import(String),
     Print(Box<Token>),
@@ -10,6 +13,8 @@ pub enum Token {
     Function(Box<Token>, Vec<Token>, Vec<Token>),
     AnonFunction(Vec<Token>, Vec<Token>),
     Class(Box<Token>, Vec<Token>),
+    ClassMethodCall(String, String, Vec<Token>),
+    CallChain(Box<Token>, Vec<Token>),
     Identifier(String),
 
     Null,
@@ -20,6 +25,7 @@ pub enum Token {
     Variable(Box<Token>, Box<Token>),
     Assign(Box<Token>, Box<Token>),
     Array(Vec<Token>),
+    Object(Box<Token>, Vec<Token>),
 
     Dictionary(Vec<Token>),
     KeyValuePair(String, Box<Token>),
@@ -42,7 +48,7 @@ pub enum Token {
     IfElse(Box<Token>, Vec<Token>, Option<Vec<Token>>),
     WhileLoop(Box<Token>, Vec<Token>),
     ForEach(Box<Token>, Box<Token>, Vec<Token>),
-    ForI(Box<Token>, Box<Token>, Box<Token>, Option<Box<Token>>, Vec<Token>),
+    ForI(Box<Token>, Box<Token>, Box<Token>, Vec<Token>),
 
     Call(Box<Token>, Vec<Token>),
     Return(Box<Token>)
@@ -60,70 +66,102 @@ impl ToString for Token {
 
 parser!(pub grammar parser() for str {
 
+    // top level rule
     pub rule script() -> Vec<Token>
-        = WHITESPACE() f:(
-            function()*
-        ) WHITESPACE() { f }
+        = WHITESPACE() f:(import() / class() / function() / comment())* WHITESPACE() { f }
 
+    // statements
     rule statements() -> Vec<Token>
-        = s:(statement()*) { s }
+        = s:((single_statement() / control_flow())*) { s }
 
-    rule statement() -> Token
-        = WHITESPACE() e:(
-            import() /
-            class() /
-            var() /
-            print() /
-            assignment() /
-            index_assigment() /
+    // single statements followed by a semicolon
+    rule single_statement() -> Token
+        = WHITESPACE() s:(
             assert() /
+            var() /
+            assignment() /
+            print() /
+            index_assigment() /
             call() /
-            function() /
+            rtn() /
+            call_chain()
+        ) WHITESPACE() SEMICOLON()+ WHITESPACE() { s }  / expected!("single statement")
+
+    // control flow statements without semicolon
+    rule control_flow() -> Token
+        = WHITESPACE() c:(
             if_else() /
             while_loop() /
             foreach_loop() /
-            fori_loop() /
-            rtn()
-        ) WHITESPACE() { e }
+            fori_loop()
+        ) WHITESPACE() { c } / expected!("control flow")
 
+    // import external file
     rule import() -> Token
-        = "import" _ s:string() _ NEWLINE() { Token::Import(s) }
+        = "import" _ s:string() { Token::Import(s) }
 
-    rule assert() -> Token
-        = "assert" _ e:expression() WHITESPACE() { Token::Assert(Box::new(e)) }
+    // single line comment
+    rule comment() -> Token
+        = "//" s:$([' ' |'a'..='z' | 'A'..='Z' | '0'..='9']*) NEWLINE() { Token::Comment(s.to_owned()) }
 
+    // class definition
     rule class() -> Token
-        = "class" _ i:identifier() WHITESPACE()
-        items:(WHITESPACE() t:(var() / function()) WHITESPACE() { t })*
-        "end"
+        = "class" WHITESPACE() i:identifier() WHITESPACE() "{" WHITESPACE()
+        items:(WHITESPACE() item:(var_statement() / function()) WHITESPACE() { item })*
+        WHITESPACE() "}" WHITESPACE()
     { Token::Class(Box::new(i), items) }
 
-    rule print() -> Token
-        = "print" _ e:expression() WHITESPACE() { Token::Print(Box::new(e)) }
+    // class member call chain
+    rule call_chain() -> Token
+        = o:(call() / identifier()) "." chain:((e:(call() / identifier()) {e}) ** ".") { Token::CallChain(Box::new(o), chain) }
 
+
+    rule call_chain_list() -> Vec<Token>
+        = quiet!{members:((e:(call() / identifier()) {e}) ** ".") { members } }
+
+    // function definition with parameters
     rule function() -> Token
-        = "function" _ name:identifier() _ "(" params:((_ i:identifier() _ {i}) ** ",") ")" WHITESPACE()
-            stmts:statements() WHITESPACE()
-            "end" WHITESPACE()
-        { Token::Function(Box::new(name), params, stmts) }
+        = "function" _ name:identifier() _ "()" stmts:block() WHITESPACE() { Token::Function(Box::new(name), vec![], stmts) }
+        / "function" _ name:identifier() _ "(" params:param_list() ")" stmts:block() WHITESPACE() { Token::Function(Box::new(name), params, stmts) }
 
+    // function call with arguments
+    rule call() -> Token
+        = i:identifier() "(" args:arg_list() ")" { Token::Call(Box::new(i), args) }
+
+    // code block wrapped in curly brackets
+    rule block() -> Vec<Token>
+        = WHITESPACE() "{" WHITESPACE() stmts:statements() WHITESPACE() "}" { stmts }
+
+    // assert expression
+    rule assert() -> Token
+        = "assert" _ e:expression() { Token::Assert(Box::new(e)) }
+
+    // print value
+    rule print() -> Token
+        = "print" _ e:expression() { Token::Print(Box::new(e)) }
+
+    // anonymous function call
     rule anonfunc() -> Token
-        = "function(" params:((_ i:identifier() _ {i}) ** ",") ")" WHITESPACE()
-            stmts:statements() WHITESPACE()
-            "end" WHITESPACE()
+        = "function(" params:param_list() ")" stmts:block()
         { Token::AnonFunction(params, stmts) }
 
-    rule call() -> Token
-        = i:identifier() "(" args:((_ e:expression() _ {e}) ** ",") ")" { Token::Call(Box::new(i), args) }
+    // single var statement with a semicolon at the end
+    rule var_statement() -> Token
+        = WHITESPACE() v:var() WHITESPACE() SEMICOLON()+ WHITESPACE() { v }
 
+    // variable declaration either with a value or default to null
     rule var() -> Token
-        = "var" _ i:identifier() _ "=" _ e:expression() {  Token::Variable(Box::new(i), Box::new(e)) }
+        = "var" _ i:identifier() WHITESPACE() "=" WHITESPACE() e:expression() {  Token::Variable(Box::new(i), Box::new(e)) } /
+          "var" _ i:identifier() { Token::Variable(Box::new(i), Box::new(Token::Null)) }
 
+    // existing variable assignment
     rule assignment() -> Token
-        = i:identifier() _ "=" _ e:expression() {  Token::Assign(Box::new(i), Box::new(e)) }
+        = i:identifier() WHITESPACE() "=" WHITESPACE() e:expression()
+        {  Token::Assign(Box::new(i), Box::new(e)) } / expected!("variable assignment")
 
     rule index_assigment() -> Token
-        = i:identifier() indexes:("[" e:expression() "]" { e })+  _ "=" _ e:expression()  { Token::IndexAssign(Box::new(i), indexes, Box::new(e)) }
+        = i:identifier() indexes:("[" e:expression() "]" { e })+  _ "=" _ e:expression()
+        { Token::IndexAssign(Box::new(i), indexes, Box::new(e)) } / expected!("index assignment")
 
     rule if_else() -> Token
         = "if" _ e:expression() WHITESPACE() "{" WHITESPACE() then_body:statements() WHITESPACE() "}" WHITESPACE()
@@ -131,22 +169,20 @@ parser!(pub grammar parser() for str {
         { Token::IfElse(Box::new(e), then_body, else_body) }
 
     rule while_loop() -> Token
-        = "while" _ e:expression() WHITESPACE() "do" WHITESPACE()
-            s:statements() WHITESPACE()
-            "end"
+        = "while" _ e:evaluation() s:block()
         { Token::WhileLoop(Box::new(e), s) }
 
+    rule evaluation() -> Token
+        = "(" e:expression() ")" { e } / e:expression() { e }
+
     rule foreach_loop() -> Token
-        = "for" _ i:identifier() _ "in" _ e:( identifier() / list()) WHITESPACE() "do" WHITESPACE()
-            s:statements() WHITESPACE()
-            "end"
+        = "for" _ "(" _ i:identifier() _ "in" _ e:( identifier() / list()) _ ")" s:block()
         { Token::ForEach(Box::new(i), Box::new(e), s) }
 
     rule fori_loop() -> Token
-        = "for" _ i:identifier() _ "=" _ from:expression() _ "to" _ to:expression() _ step:("step" _ e:expression() { Box::new(e) } )? _ "do" WHITESPACE()
-            s:statements() WHITESPACE()
-            "end"
-        { Token::ForI(Box::new(i), Box::new(from), Box::new(to), step, s) }
+        = "for" _ "(" _ v:(var() / assignment()) _ ";" _ to:expression() _ ";" _ step:assignment() _ ")" s:block()
+        { Token::ForI(Box::new(v), Box::new(to), Box::new(step), s) }
+
 
     rule rtn() -> Token
         = "return" _ e:expression() { Token::Return(Box::new(e)) }
@@ -166,34 +202,12 @@ parser!(pub grammar parser() for str {
         a:@ _ "/" _ b:(@) { Token::Div(Box::new(a), Box::new(b)) }
         a:@ _ "^" _ b:(@) { Token::Pow(Box::new(a), Box::new(b)) }
         --
-        l:literal() { l }
-        i:identifier() "(" args:((_ e:expression() _ {e}) ** ",") ")" { Token::Call(Box::new(i), args) }
+        c:call_chain() { c }
         a:array_index() { a }
+        l:literal() { l }
         i:identifier() { i }
+
     }
-
-    rule func_call() -> Token
-        = quiet!{i:identifier() "(" args:((_ e:expression() _ {e}) ** ",") ")" { Token::Call(Box::new(i), args) } }
-
-    rule identifier() -> Token
-        = quiet!{ n:$(['a'..='z' | 'A'..='Z' | '_']['a'..='z' | 'A'..='Z' | '0'..='9' | '_']*) { Token::Identifier(n.to_owned()) } }
-        / expected!("identifier")
-
-    rule array_index() -> Token
-        = i:identifier() indexes:("[" e:expression() "]" { e })+ { Token::Index(Box::new(i), indexes) }
-
-    rule string() -> String
-        = quiet!{ n:$([^'"']*) { n.to_owned() } }
-        / expected!("string")
-
-    rule integer() -> i32
-        = quiet!{ n:$("-"? ['0'..='9']+) { n.parse().unwrap() } }
-
-    rule list() -> Token
-        = quiet!{ "[" WHITESPACE() elements:(( WHITESPACE() e:expression() _ {e}) ** ",") WHITESPACE() "]" { Token::Array(elements) } }
-
-    rule json() -> Token
-        = quiet!{ "{" WHITESPACE() kv:(( WHITESPACE() "\"" k:string() "\"" _ ":" _ e:expression() _ {  Token::KeyValuePair(k, Box::new(e)) } ) ** ",") WHITESPACE() "}" { Token::Dictionary(kv) } }
 
     rule literal() -> Token
         = n:$(['0'..='9']+ "." ['0'..='9']+) { Token::Float(n.parse().unwrap()) }
@@ -204,11 +218,51 @@ parser!(pub grammar parser() for str {
         / "\"" s:string() "\"" { Token::String(s) }
         / list()
         / json()
+        / new_object_call()
         / c:anonfunc() { c }
+
+    rule new_object_call() -> Token
+        = quiet!{"new" _ i:identifier() "(" args:arg_list() ")" { Token::Object(Box::new(i), args) } }
+
+    rule arg_list() -> Vec<Token>
+        = quiet!{args:((_ e:expression() _ {e}) ** ",") { args } }
+
+    rule param_list() -> Vec<Token>
+        = quiet!{args:((_ e:expression() _ {e}) ** ",") { args } }
+
+    // identifier starts with a letter or underscore, followed by any number of letters, numbers, or underscores, returns a string
+    rule identifier_as_string() -> String
+        = n:$(['a'..='z' | 'A'..='Z' | '_']['a'..='z' | 'A'..='Z' | '0'..='9' | '_']*) { n.to_owned() }
+
+    rule identifier() -> Token
+        = quiet!{ n:$(['a'..='z' | 'A'..='Z' | '_']['a'..='z' | 'A'..='Z' | '0'..='9' | '_']*) { Token::Identifier(n.to_owned()) } }
+        / expected!("identifier")
+
+    rule array_index() -> Token
+        = i:identifier() indexes:("[" e:expression() "]" { e })+ { Token::Index(Box::new(i), indexes) }
+
+    rule string() -> String
+        = n:$([^'"']*) { n.to_owned() }
+        / expected!("string")
+
+    rule integer() -> i32
+        = n:$("-"? ['0'..='9']+) { n.parse().unwrap() }
+
+    rule list() -> Token
+        = quiet!{ "[" WHITESPACE() elements:(( WHITESPACE() e:expression() _ {e}) ** ",") WHITESPACE() "]" { Token::Array(elements) } }
+
+    rule json() -> Token
+        = quiet!{ "{" WHITESPACE() kv:(( WHITESPACE() "\"" k:string() "\"" _ ":" _ e:expression() _ {  Token::KeyValuePair(k, Box::new(e)) } ) ** ",") WHITESPACE() "}" { Token::Dictionary(kv) } }
+
+
+
+    // statement ends with at least one semicolon
+    rule SEMICOLON() = quiet!{";"}
 
     rule _() =  quiet!{[' ' | '\t']*}
     rule NEWLINE() = quiet!{ ['\n'|'\r'] }
     rule NEWLINES() = quiet!{ ['\n'|'\r']* }
     rule WHITESPACE() = quiet!{ [' '|'\t'|'\n'|'\r']* }
+    rule UTF8CHAR() -> char = quiet!{ c:([^ '\x00'..='\x1F' | '\t' | '\n'|'\r']) { c } }
 
 });

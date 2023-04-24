@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Div, Mul, Not, Sub};
+use std::rc::Rc;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Value {
@@ -15,6 +16,7 @@ pub enum Value {
     String(String),
     Array(Vec<Value>),
     Dictionary(HashMap<String, Value>),
+    Object(Rc<HashMap<String, Value>>),
 
     ReturnPosition(i32),
     ReturnFrame(i32),

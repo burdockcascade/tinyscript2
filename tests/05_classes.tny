@@ -1,12 +1,33 @@
-class math
-end
+class person {
 
-function math:max()
+    var name = "peter";
+    var age;
 
-end
+    function speak(msg) {
+        print msg;
+    }
+}
 
-function min:max()
+class dog {
+    function bark() {
+        print "woof";
+    }
+}
 
-end
+class house {
+    function get_owner() {
+        return new person();
+    }
 
-var me = person()
+    function get_pet() {
+        return new dog();
+    }
+}
+
+function main(argv) {
+
+    var man = new person();
+
+    print man.speak("hello");
+
+}

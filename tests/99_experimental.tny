@@ -1,9 +1,5 @@
-function main
-    var f = [1, false, 4.5, "hello", { "color" : "red"}]
+function main() {
 
-    f2 = f[2]
-    assert f2 == 4.5
 
-    f[1] = true
-    assert f[1]
-end
+
+}

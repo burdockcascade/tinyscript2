@@ -46,6 +46,12 @@ impl VM {
 
         trace!("{:?}", self.instructions);
 
+        // do not run if no instructions
+        if self.instructions.len() == 0 {
+            debug!("no instructions to run");
+            return Ok(Null);
+        }
+
         loop {
 
             let instruction = self.instructions.get(self.ip as usize).expect(&*format!("instruction #{} not found", self.ip));
@@ -392,10 +398,6 @@ impl VM {
 
         Ok(self.stack.pop().or(Option::from(Value::Null)).unwrap())
 
-    }
-
-    fn pop_1_value(&mut self) -> Value {
-        return self.stack.pop().expect("no 1st value on ops stack");
     }
 
     fn pop_2_values(&mut self) -> (Value, Value) {

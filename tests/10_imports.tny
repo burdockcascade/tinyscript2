@@ -1,2 +1,2 @@
-import tests\00_helloworld.tny
-import tests\01_variables.tny
+import tests\00_helloworld.tny;
+import tests\01_variables.tny;
