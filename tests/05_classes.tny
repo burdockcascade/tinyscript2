@@ -1,7 +1,12 @@
 class person {
 
-    var name = "peter";
+    var name;
     var age;
+
+    function constructor() {
+        this.name = "bob";
+        this.age = 99;
+    }
 
     function speak(msg) {
         print msg;

@@ -14,7 +14,7 @@ pub enum Token {
     AnonFunction(Vec<Token>, Vec<Token>),
     Class(Box<Token>, Vec<Token>),
     ClassMethodCall(String, String, Vec<Token>),
-    CallChain(Box<Token>, Vec<Token>),
+    Chain(Box<Token>, Vec<Token>),
     Identifier(String),
 
     Null,
@@ -81,10 +81,9 @@ parser!(pub grammar parser() for str {
             var() /
             assignment() /
             print() /
-            index_assigment() /
             call() /
             rtn() /
-            call_chain()
+            chain()
         ) WHITESPACE() SEMICOLON()+ WHITESPACE() { s }  / expected!("single statement")
 
     // control flow statements without semicolon
@@ -112,12 +111,11 @@ parser!(pub grammar parser() for str {
     { Token::Class(Box::new(i), items) }
 
     // class member call chain
-    rule call_chain() -> Token
-        = o:(call() / identifier()) "." chain:((e:(call() / identifier()) {e}) ** ".") { Token::CallChain(Box::new(o), chain) }
+    rule chain() -> Token
+        = o:chain_item() "." chain:((e:chain_item() {e}) ** ".") { Token::Chain(Box::new(o), chain) }
 
-
-    rule call_chain_list() -> Vec<Token>
-        = quiet!{members:((e:(call() / identifier()) {e}) ** ".") { members } }
+    rule chain_item() -> Token
+        = item:(array_index() / call() / identifier()) { item }
 
     // function definition with parameters
     rule function() -> Token
@@ -154,14 +152,20 @@ parser!(pub grammar parser() for str {
         = "var" _ i:identifier() WHITESPACE() "=" WHITESPACE() e:expression() {  Token::Variable(Box::new(i), Box::new(e)) } /
           "var" _ i:identifier() { Token::Variable(Box::new(i), Box::new(Token::Null)) }
 
+
+
+
     // existing variable assignment
     rule assignment() -> Token
-        = i:identifier() WHITESPACE() "=" WHITESPACE() e:expression()
-        {  Token::Assign(Box::new(i), Box::new(e)) } / expected!("variable assignment")
+        = l:assignment_left() WHITESPACE() "=" WHITESPACE() r:expression() {  Token::Assign(Box::new(l), Box::new(r)) } / expected!("variable assignment")
 
-    rule index_assigment() -> Token
-        = i:identifier() indexes:("[" e:expression() "]" { e })+  _ "=" _ e:expression()
-        { Token::IndexAssign(Box::new(i), indexes, Box::new(e)) } / expected!("index assignment")
+    rule assignment_left() -> Token
+        = a:assignment_left_item() { a }
+        / o:assignment_left_item() "." chain:((e:assignment_left_item() {e}) ** ".") { Token::Chain(Box::new(o), chain) }
+
+    rule assignment_left_item() -> Token
+        = item:(array_index() / identifier()) { item }
+
 
     rule if_else() -> Token
         = "if" _ e:expression() WHITESPACE() "{" WHITESPACE() then_body:statements() WHITESPACE() "}" WHITESPACE()
@@ -202,11 +206,9 @@ parser!(pub grammar parser() for str {
         a:@ _ "/" _ b:(@) { Token::Div(Box::new(a), Box::new(b)) }
         a:@ _ "^" _ b:(@) { Token::Pow(Box::new(a), Box::new(b)) }
         --
-        c:call_chain() { c }
-        a:array_index() { a }
+        c:chain() { c }
         l:literal() { l }
         i:identifier() { i }
-
     }
 
     rule literal() -> Token
@@ -228,7 +230,7 @@ parser!(pub grammar parser() for str {
         = quiet!{args:((_ e:expression() _ {e}) ** ",") { args } }
 
     rule param_list() -> Vec<Token>
-        = quiet!{args:((_ e:expression() _ {e}) ** ",") { args } }
+        = quiet!{args:((_ e:identifier() _ {e}) ** ",") { args } }
 
     // identifier starts with a letter or underscore, followed by any number of letters, numbers, or underscores, returns a string
     rule identifier_as_string() -> String

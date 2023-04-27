@@ -96,6 +96,7 @@ impl Compiler {
         for token in script.as_slice() {
             match token {
                 Token::Class(class_name, items) => {
+
                     for item in items {
                         match item {
 
@@ -110,14 +111,14 @@ impl Compiler {
                                 new_params.push(Token::Identifier(String::from("this")));
 
                                 // create a new function with the new name
-                                self.functions.push(Function::new(&Box::new(Token::Identifier(new_name.clone())), new_params.as_slice(), statements.as_slice()));
+                                self.functions.push(Function::new(&Box::new(Token::Identifier(new_name.clone())), new_params.as_slice(), statements.as_slice(), self.classes.clone()));
                             },
                             _ => {}
                         }
                     }
                 }
                 Token::Function(func_name, params, items) => {
-                    let f = Function::new(&func_name, params.as_slice(), items.as_slice());
+                    let f = Function::new(&func_name, params.as_slice(), items.as_slice(), self.classes.clone());
                     self.functions.push(f);
                 },
                 _ => {}
@@ -150,7 +151,7 @@ impl Compiler {
 
 impl Function {
 
-    pub fn new(name: &Box<Token>, params: &[Token], statements: &[Token]) -> Self {
+    pub fn new(name: &Box<Token>, params: &[Token], statements: &[Token], classes: HashMap<String, HashMap<String, Value>>) -> Self {
 
         // create a new function
         let mut f = Function {
@@ -577,7 +578,7 @@ impl Function {
             }
 
             // handle call chain and print debug info
-            Token::CallChain(init, chain) => {
+            Token::Chain(init, chain) => {
                 trace!("call chain: {:?} and {:?}", init, chain);
             }
 
