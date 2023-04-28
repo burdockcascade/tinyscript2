@@ -12,7 +12,7 @@ mod compiler;
 
 pub fn compile(program: &str) -> Result<Program, String> {
 
-    let _ = TermLogger::init(LevelFilter::Trace, Config::default(),    TerminalMode::Mixed, ColorChoice::Auto);
+    let _ = TermLogger::init(LevelFilter::Trace, Config::default(),TerminalMode::Mixed, ColorChoice::Auto);
 
     // Tokenize Code
     let script: Vec<Token> = frontend::parser::script(program).map_err(|e| e.to_string())?;

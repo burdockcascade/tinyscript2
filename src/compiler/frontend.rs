@@ -157,11 +157,12 @@ parser!(pub grammar parser() for str {
 
     // existing variable assignment
     rule assignment() -> Token
-        = l:assignment_left() WHITESPACE() "=" WHITESPACE() r:expression() {  Token::Assign(Box::new(l), Box::new(r)) } / expected!("variable assignment")
+        = l:assignment_left() WHITESPACE() "=" WHITESPACE() r:expression() {  Token::Assign(Box::new(l), Box::new(r)) }
+        / expected!("variable assignment")
 
     rule assignment_left() -> Token
-        = a:assignment_left_item() { a }
-        / o:assignment_left_item() "." chain:((e:assignment_left_item() {e}) ** ".") { Token::Chain(Box::new(o), chain) }
+        = o:assignment_left_item() "." chain:((e:assignment_left_item() {e}) ** ".") { Token::Chain(Box::new(o), chain) }
+        / a:assignment_left_item() { a }
 
     rule assignment_left_item() -> Token
         = item:(array_index() / identifier()) { item }
@@ -206,22 +207,29 @@ parser!(pub grammar parser() for str {
         a:@ _ "/" _ b:(@) { Token::Div(Box::new(a), Box::new(b)) }
         a:@ _ "^" _ b:(@) { Token::Pow(Box::new(a), Box::new(b)) }
         --
-        c:chain() { c }
         l:literal() { l }
-        i:identifier() { i }
     }
 
     rule literal() -> Token
-        = n:$(['0'..='9']+ "." ['0'..='9']+) { Token::Float(n.parse().unwrap()) }
+        = f:float() { Token::Float(f) }
         / i:integer() { Token::Integer(i) }
-        / "null" { Token::Null }
-        / "true" { Token::Bool(true) }
-        / "false" { Token::Bool(false) }
+        / c:anonfunc() { c }
+        / a:array_index() { a }
+        / c:chain() { c }
+        / new_object_call()
+        / i:identifier() { i }
+        / n:null() { n }
+        / b:boolean() { b }
         / "\"" s:string() "\"" { Token::String(s) }
         / list()
         / json()
-        / new_object_call()
-        / c:anonfunc() { c }
+
+    rule null() -> Token
+        = "null" { Token::Null }
+
+    rule boolean() -> Token
+        = "true" { Token::Bool(true) }
+        / "false" { Token::Bool(false) }
 
     rule new_object_call() -> Token
         = quiet!{"new" _ i:identifier() "(" args:arg_list() ")" { Token::Object(Box::new(i), args) } }
@@ -237,11 +245,12 @@ parser!(pub grammar parser() for str {
         = n:$(['a'..='z' | 'A'..='Z' | '_']['a'..='z' | 'A'..='Z' | '0'..='9' | '_']*) { n.to_owned() }
 
     rule identifier() -> Token
-        = quiet!{ n:$(['a'..='z' | 'A'..='Z' | '_']['a'..='z' | 'A'..='Z' | '0'..='9' | '_']*) { Token::Identifier(n.to_owned()) } }
+        = n:$(['a'..='z' | 'A'..='Z' | '_']['a'..='z' | 'A'..='Z' | '0'..='9' | '_']*) { Token::Identifier(n.to_owned()) }
         / expected!("identifier")
 
     rule array_index() -> Token
         = i:identifier() indexes:("[" e:expression() "]" { e })+ { Token::Index(Box::new(i), indexes) }
+        / expected!("array index")
 
     rule string() -> String
         = n:$([^'"']*) { n.to_owned() }
@@ -249,6 +258,9 @@ parser!(pub grammar parser() for str {
 
     rule integer() -> i32
         = n:$("-"? ['0'..='9']+) { n.parse().unwrap() }
+
+    rule float() -> f32
+        = n:$("-"? ['0'..='9']+ "." ['0'..='9']+) { n.parse().unwrap() }
 
     rule list() -> Token
         = quiet!{ "[" WHITESPACE() elements:(( WHITESPACE() e:expression() _ {e}) ** ",") WHITESPACE() "]" { Token::Array(elements) } }

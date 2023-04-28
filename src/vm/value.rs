@@ -9,7 +9,6 @@ use std::rc::Rc;
 pub enum Value {
 
     Null,
-
     Integer(i32),
     Float(f32),
     Bool(bool),

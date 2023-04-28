@@ -1,8 +1,0 @@
-function main() {
-
-    index[2] = 2;
-    person.me = true;
-
-    something.insane[3].long().and().crazy[2] = something.insane[9].long().and().crazy[77];
-
-}
