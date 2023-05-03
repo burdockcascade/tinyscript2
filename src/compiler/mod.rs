@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
-use std::ops::Deref;
 use std::rc::Rc;
-use log::{debug, error, info, trace};
+use log::{debug, error, trace};
 
 use crate::compiler::frontend::Token;
 use crate::vm::program::{Instruction, Program};
