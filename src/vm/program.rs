@@ -2,14 +2,17 @@ use std::collections::HashMap;
 
 use crate::vm::value::Value;
 
+// Program
 pub struct Program {
     pub instructions: Vec<Instruction>,
     pub functions: HashMap<String, i32>,
 }
 
+// Instruction
 #[derive(Clone, Debug)]
 pub enum Instruction {
 
+    // Built-in Functions
     Assert,
     Print,
 
@@ -33,6 +36,7 @@ pub enum Instruction {
     JumpIfFalse(i32),
     ReturnValue,
 
+    // Operators
     Equal,
     NotEqual,
     Add,
@@ -41,10 +45,13 @@ pub enum Instruction {
     Divide,
     Pow,
 
+    // Comparison
     LessThan,
     LessThanOrEqual,
     GreaterThan,
     GreaterThanOrEqual,
 
+    // Halt Program
     Halt(String)
+
 }

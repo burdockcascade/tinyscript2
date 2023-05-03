@@ -11,14 +11,17 @@ use crate::vm::value::Value::Null;
 
 pub mod frontend;
 
+// Compiler
 pub struct Compiler {
     functions: Vec<Function>,
     classes: HashMap<String, HashMap<String, Value>>,
 }
 
+// Function
 struct Function {
     name: String,
     instructions: Vec<Instruction>,
+    anonymous_functions: Vec<Function>,
     variables: HashMap<String, i32>
 }
 
@@ -111,14 +114,14 @@ impl Compiler {
                                 new_params.push(Token::Identifier(String::from("this")));
 
                                 // create a new function with the new name
-                                self.functions.push(Function::new(&Box::new(Token::Identifier(new_name.clone())), new_params.as_slice(), statements.as_slice(), self.classes.clone()));
+                                self.functions.push(Function::new(&new_name, new_params.as_slice(), statements.as_slice(), self.classes.clone()));
                             },
                             _ => {}
                         }
                     }
                 }
                 Token::Function(func_name, params, items) => {
-                    let f = Function::new(&func_name, params.as_slice(), items.as_slice(), self.classes.clone());
+                    let f = Function::new(func_name, params.as_slice(), items.as_slice(), self.classes.clone());
                     self.functions.push(f);
                 },
                 _ => {}
@@ -134,9 +137,18 @@ impl Compiler {
         // Compile function instructions into one program
         debug!("Compiling functions into program");
         for func in self.functions {
-            trace!("compiling func {} with {} instructions and {} vars", func.name, func.instructions.len(), func.variables.len());
+
+            // insert the function into the program
+            trace!("compiling function {} with {} instructions and {} vars", func.name, func.instructions.len(), func.variables.len());
             p.functions.insert(func.name.clone(), p.instructions.len() as i32);
             p.instructions.extend(func.instructions);
+
+            // insert the anonymous functions into the program
+            for f in func.anonymous_functions {
+                trace!("compiling anonymous func {} with {} instructions and {} vars", f.name, f.instructions.len(), f.variables.len());
+                p.functions.insert(f.name.clone(), p.instructions.len() as i32);
+                p.instructions.extend(f.instructions);
+            }
         }
 
         // log the program
@@ -151,12 +163,13 @@ impl Compiler {
 
 impl Function {
 
-    pub fn new(name: &Box<Token>, params: &[Token], statements: &[Token], classes: HashMap<String, HashMap<String, Value>>) -> Self {
+    pub fn new(name: &String, params: &[Token], statements: &[Token], classes: HashMap<String, HashMap<String, Value>>) -> Self {
 
         // create a new function
         let mut f = Function {
             name: name.to_string(),
             instructions: vec![],
+            anonymous_functions: vec![],
             variables: HashMap::default()
         };
 
@@ -226,7 +239,7 @@ impl Function {
     }
 
     // compile a variable declaration
-    fn compile_variable(&mut self, name: &Box<Token>, value: &Box<Token>) {
+    fn compile_variable(&mut self, name: &String, value: &Box<Token>) {
 
         // Check if variable has already been declared
         if self.variables.contains_key(name.to_string().as_str()) {
@@ -258,7 +271,7 @@ impl Function {
     }
 
     // compile assignment
-    fn compile_assignment(&mut self, name: &Box<Token>, exp: &Box<Token>) {
+    fn compile_assignment(&mut self, name: &String, exp: &Box<Token>) {
 
         // check if variable has been declared
         if !self.variables.contains_key(name.to_string().as_str()) {
@@ -426,9 +439,16 @@ impl Function {
 
             // todo
             Token::AnonFunction(params, statements) => {
-                // let func_name = format!("func{}", self.instructions.len());
-                // self.compile_function(&Box::new(Token::Identifier(func_name.clone())), params, statements);
-                // self.instructions.push(Instruction::Push(Value::FunctionRef(func_name)));
+                let func_name = format!("func{}", self.instructions.len());
+
+                // crete function
+                let func = Function::new(&func_name, params, statements, HashMap::default());
+
+                // add function to anon functions
+                self.anonymous_functions.push(func);
+
+                // Push ref to function
+                self.instructions.push(Instruction::Push(Value::FunctionRef(func_name)));
             }
 
             Token::Null => {

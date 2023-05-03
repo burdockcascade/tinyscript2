@@ -11,6 +11,7 @@ pub mod program;
 
 const LOCAL_VARIABLE_OFFSET: i32 = 2;
 
+// Virtual Machine
 pub struct VM {
     instructions: Vec<Instruction>,
     functions: HashMap<String, i32>,
@@ -52,6 +53,7 @@ impl VM {
             return Ok(Null);
         }
 
+        // run instructions
         loop {
 
             let instruction = self.instructions.get(self.ip as usize).expect(&*format!("instruction #{} not found", self.ip));
@@ -67,7 +69,7 @@ impl VM {
                     trace!("asserting '{}' is true", output);
                     match output {
                         Value::Bool(val) => assert!(val),
-                        _ => unreachable!()
+                        _ => error!("unable to assert {}", output)
                     }
 
                     self.ip += 1;

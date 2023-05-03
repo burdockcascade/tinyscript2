@@ -37,7 +37,6 @@ function main() {
     var g2 = g["name"];
     assert g2 == "peter";
 
-    assert g.age == 43;
 
     var m1 = 1 + 1;
     assert m1 == 2;

@@ -5,9 +5,11 @@ use std::fmt::{Display, Formatter};
 use std::ops::{Add, Div, Mul, Not, Sub};
 use std::rc::Rc;
 
+// Value
 #[derive(Clone, PartialEq, Debug)]
 pub enum Value {
 
+    // Values
     Null,
     Integer(i32),
     Float(f32),
@@ -17,6 +19,7 @@ pub enum Value {
     Dictionary(HashMap<String, Value>),
     Object(Rc<HashMap<String, Value>>),
 
+    // Return
     ReturnPosition(i32),
     ReturnFrame(i32),
 
@@ -40,6 +43,7 @@ impl Display for Value {
     }
 }
 
+// Value Comparison
 impl PartialOrd for Value {
     fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
         match (self, rhs) {
@@ -50,7 +54,7 @@ impl PartialOrd for Value {
     }
 }
 
-
+// Value Subtraction
 impl Sub for Value {
     type Output = Value;
 
@@ -66,6 +70,8 @@ impl Sub for Value {
 
 }
 
+
+// Value Addition
 impl Add for Value {
     type Output = Value;
 
@@ -85,6 +91,7 @@ impl Add for Value {
     }
 }
 
+// Value Multiplication
 impl Mul for Value {
     type Output = Value;
 
@@ -99,6 +106,7 @@ impl Mul for Value {
     }
 }
 
+// Value Division
 impl Div for Value {
     type Output = Value;
 
@@ -113,6 +121,7 @@ impl Div for Value {
     }
 }
 
+// Value Negation
 impl Not for Value {
     type Output = Value;
 

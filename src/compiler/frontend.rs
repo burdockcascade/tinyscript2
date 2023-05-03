@@ -10,7 +10,7 @@ pub enum Token {
     Import(String),
     Print(Box<Token>),
 
-    Function(Box<Token>, Vec<Token>, Vec<Token>),
+    Function(String, Vec<Token>, Vec<Token>),
     AnonFunction(Vec<Token>, Vec<Token>),
     Class(Box<Token>, Vec<Token>),
     ClassMethodCall(String, String, Vec<Token>),
@@ -22,8 +22,8 @@ pub enum Token {
     Float(f32),
     Bool(bool),
     String(String),
-    Variable(Box<Token>, Box<Token>),
-    Assign(Box<Token>, Box<Token>),
+    Variable(String, Box<Token>),
+    Assign(String, Box<Token>),
     Array(Vec<Token>),
     Object(Box<Token>, Vec<Token>),
 
@@ -119,8 +119,8 @@ parser!(pub grammar parser() for str {
 
     // function definition with parameters
     rule function() -> Token
-        = "function" _ name:identifier() _ "()" stmts:block() WHITESPACE() { Token::Function(Box::new(name), vec![], stmts) }
-        / "function" _ name:identifier() _ "(" params:param_list() ")" stmts:block() WHITESPACE() { Token::Function(Box::new(name), params, stmts) }
+        = "function" _ name:identifier() _ "()" stmts:block() WHITESPACE() { Token::Function(name.to_string(), vec![], stmts) }
+        / "function" _ name:identifier() _ "(" params:param_list() ")" stmts:block() WHITESPACE() { Token::Function(name.to_string(), params, stmts) }
 
     // function call with arguments
     rule call() -> Token
@@ -149,15 +149,15 @@ parser!(pub grammar parser() for str {
 
     // variable declaration either with a value or default to null
     rule var() -> Token
-        = "var" _ i:identifier() WHITESPACE() "=" WHITESPACE() e:expression() {  Token::Variable(Box::new(i), Box::new(e)) } /
-          "var" _ i:identifier() { Token::Variable(Box::new(i), Box::new(Token::Null)) }
+        = "var" _ name:identifier() WHITESPACE() "=" WHITESPACE() e:expression() {  Token::Variable(name.to_string(), Box::new(e)) } /
+          "var" _ name:identifier() { Token::Variable(name.to_string(), Box::new(Token::Null)) }
 
 
 
 
     // existing variable assignment
     rule assignment() -> Token
-        = l:assignment_left() WHITESPACE() "=" WHITESPACE() r:expression() {  Token::Assign(Box::new(l), Box::new(r)) }
+        = name:assignment_left() WHITESPACE() "=" WHITESPACE() r:expression() {  Token::Assign(name.to_string(), Box::new(r)) }
         / expected!("variable assignment")
 
     rule assignment_left() -> Token
