@@ -1,0 +1,5 @@
+function main(argv) {
+
+    var boolean1 = true;
+
+}

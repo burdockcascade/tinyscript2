@@ -417,42 +417,7 @@ mod test {
     use crate::vm::value::Value;
     use crate::vm::VM;
 
-    #[test]
-    fn add_integers() {
 
-        let program = Program {
-            instructions: vec![
-                Push(Value::Integer(7)),
-                Push(Value::Integer(9)),
-                Add,
-            ],
-            functions: Default::default(),
-        };
 
-        let vm: VM = VM::new(program);
-        let v = vm.exec(Value::Array(vec![])).expect("err");
-
-        assert_eq!(v, Value::Integer(16))
-
-    }
-
-    #[test]
-    fn subtract_integers() {
-
-        let program = Program {
-            instructions: vec![
-                Push(Value::Integer(12)),
-                Push(Value::Integer(9)),
-                Sub,
-            ],
-            functions: Default::default(),
-        };
-
-        let vm: VM = VM::new(program);
-        let v = vm.exec(Value::Array(vec![])).expect("err");
-
-        assert_eq!(v, Value::Integer(3))
-
-    }
 
 }

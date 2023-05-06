@@ -20,7 +20,7 @@ pub struct Compiler {
 struct Function {
     name: String,
     instructions: Vec<Instruction>,
-    anonymous_functions: Vec<Function>,
+    anonymous_functions: Vec<Token>,
     variables: HashMap<String, i32>
 }
 
@@ -120,8 +120,28 @@ impl Compiler {
                     }
                 }
                 Token::Function(func_name, params, items) => {
+
+                    // compile new function
+                    debug!("compiling function {}", func_name);
+                    trace!("{} parameters and {} statements", params.len(), items.len());
                     let f = Function::new(func_name, params.as_slice(), items.as_slice(), self.classes.clone());
+
+                    // compile anonymous functions
+                    for af in f.anonymous_functions.iter() {
+
+                        match af {
+                            Token::Function(anon_name, params, statements) => {
+                                debug!("compiling anonymous function {}", anon_name);
+                                trace!("{} parameters and {} statements", params.len(), statements.len());
+                                self.functions.push(Function::new(&anon_name, params.as_slice(), statements.as_slice(), self.classes.clone()));
+                            }
+                            _ => unreachable!("anonymous function is not a function")
+                        }
+                    }
+
+                    // push the function to the functions vector
                     self.functions.push(f);
+
                 },
                 _ => {}
             }
@@ -134,7 +154,7 @@ impl Compiler {
         };
 
         // Compile function instructions into one program
-        debug!("Compiling functions into program");
+        debug!("Compiling program");
         for func in self.functions {
 
             // insert the function into the program
@@ -142,12 +162,6 @@ impl Compiler {
             p.functions.insert(func.name.clone(), p.instructions.len() as i32);
             p.instructions.extend(func.instructions);
 
-            // insert the anonymous functions into the program
-            for f in func.anonymous_functions {
-                trace!("compiling anonymous func {} with {} instructions and {} vars", f.name, f.instructions.len(), f.variables.len());
-                p.functions.insert(f.name.clone(), p.instructions.len() as i32);
-                p.instructions.extend(f.instructions);
-            }
         }
 
         // log the program
@@ -171,8 +185,6 @@ impl Function {
             anonymous_functions: vec![],
             variables: HashMap::default()
         };
-
-        trace!("=== new function '{:?}' started with {} parameters and {} statements", f.name, params.len(), statements.len());
 
         // extend the stack size
         let pos = f.instructions.len() as i32;
@@ -199,7 +211,6 @@ impl Function {
 
         // set the stack size
         f.instructions[pos as usize] = Instruction::ExtendStackSize(f.variables.len() as i32);
-        trace!("end of function definition for '{:?}'", name);
 
         return f;
 
@@ -284,7 +295,7 @@ impl Function {
         let index = self.get_or_create_variable(name.to_string());
 
         // store value in variable
-        trace!("assigning value to variable '{}' ({})", name.to_string(), index);
+        trace!("storing value in variable {}", name.to_string());
         self.instructions.push(Instruction::StoreLocalVariable(index));
     }
 
@@ -440,11 +451,8 @@ impl Function {
             Token::AnonFunction(params, statements) => {
                 let func_name = format!("func{}", self.instructions.len());
 
-                // crete function
-                let func = Function::new(&func_name, params, statements, HashMap::default());
-
                 // add function to anon functions
-                self.anonymous_functions.push(func);
+                self.anonymous_functions.push(Token::Function(func_name.clone(), params.clone(), statements.clone()));
 
                 // Push ref to function
                 self.instructions.push(Instruction::Push(Value::FunctionRef(func_name)));
@@ -476,6 +484,7 @@ impl Function {
             }
 
             Token::Identifier(id) => {
+                trace!("pushing {:?} onto stack", token);
                 let idx = self.get_or_create_variable(id.clone());
                 self.instructions.push(Instruction::LoadLocalVariable(idx));
             }
@@ -527,6 +536,7 @@ impl Function {
             }
 
             Token::Call(name, args) => {
+                trace!("call = {:?}, args = {:?}", name, args);
                 self.compile_call(name, args);
             }
 

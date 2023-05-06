@@ -40,13 +40,13 @@ function main(argv) {
     execute(f);
     execute(x);
 
-    execute(function(bool) {
+    execute(function(b3) {
         assert true;
     });
 
     var table = {
-        "f1": function(bool) {
-            assert bool;
+        "f1": function(b5) {
+            assert b5;
         }
     };
 

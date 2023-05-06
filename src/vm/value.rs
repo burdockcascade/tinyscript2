@@ -93,15 +93,28 @@ impl Add for Value {
 
     fn add(self, rhs: Value) -> <Self as Add<Value>>::Output {
         match (self, rhs) {
+
+            // add integers together
             (Value::Integer(v1), Value::Integer(v2)) => Value::Integer(v1 + v2),
             (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f32 + v2),
+            (Value::Integer(v1), Value::String(v2)) => Value::String(v1.to_string().add(&*v2)),
+
+            // add floats together
             (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 + v2 as f32),
             (Value::Float(v1), Value::Float(v2)) => Value::Float(v1 + v2),
+
+            // add strings together
             (Value::String(v1), Value::String(v2)) => Value::String(v1.add(&*v2)),
             (Value::String(v1), Value::Bool(v2)) => Value::String(v1.add(&*v2.to_string())),
             (Value::String(v1), Value::Integer(v2)) => Value::String(v1.add(&*v2.to_string())),
             (Value::String(v1), Value::Float(v2)) => Value::String(v1.add(&*v2.to_string())),
+
+            // add arrays together
             (Value::Array(v1), Value::Array(v2)) => Value::Array([v1, v2].concat()),
+
+            // add booleans together but only true + true = true
+            (Value::Bool(v1), Value::Bool(v2)) => Value::Bool(v1 && v2),
+
             _ => unreachable!("can not add values")
         }
     }
@@ -156,13 +169,25 @@ mod test {
 
     #[test]
     fn test_add() {
+
+        // integers
         assert_eq!(Value::Integer(2) + Value::Integer(3), Value::Integer(5));
         assert_eq!(Value::Integer(2) + Value::Float(3.3), Value::Float(5.3));
+
+        // floats
         assert_eq!(Value::Float(2.2) + Value::Float(3.3), Value::Float(5.5));
         assert_eq!(Value::Float(2.2) + Value::Integer(3), Value::Float(5.2));
+
+        // strings
         assert_eq!(Value::String(String::from("x = ")) + Value::Integer(3), Value::String(String::from("x = 3")));
         assert_eq!(Value::String(String::from("x = ")) + Value::Float(3.1), Value::String(String::from("x = 3.1")));
         assert_eq!(Value::String(String::from("x = ")) + Value::Bool(true), Value::String(String::from("x = true")));
+
+        // true and false booleans should return false
+        assert_eq!(Value::Bool(true) + Value::Bool(false), Value::Bool(false));
+        assert_eq!(Value::Bool(false) + Value::Bool(true), Value::Bool(false));
+        assert_eq!(Value::Bool(false) + Value::Bool(false), Value::Bool(false));
+        assert_eq!(Value::Bool(true) + Value::Bool(true), Value::Bool(true));
     }
 
     #[test]

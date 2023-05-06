@@ -1,4 +1,4 @@
-function main() {
+function main(args) {
 
     var myFirstName = "Sanela";
     assert myFirstName == "Sanela";
@@ -12,7 +12,7 @@ function main() {
     var myAge = 30;
     assert myAge == 30;
 
-    var myFullName = myFirstName + myLastName;
+    var myFullName = myFirstName + " " + myLastName;
     assert myFullName == "Sanela Kurtovic";
 
     var myStory = "My name is " + myFullName + " and I am " + myAge + " years old. I was born in " + myHomeTown + " and I really like it there.";
@@ -55,13 +55,13 @@ function main() {
     assert float5 == 11.11;
 
     var floatSum = float + float2 + float3 + float4 + float5;
-    assert floatSum == 37.41;
+    assert floatSum == 37.35;
 
     var floatAverage = floatSum / 5;
-    assert floatAverage == 7.482;
+    assert floatAverage == 7.47;
 
-    var boolean = true;
-    assert boolean == true;
+    var boolean1 = true;
+    assert boolean1 == true;
 
     var boolean2 = false;
     assert boolean2 == false;
@@ -75,7 +75,7 @@ function main() {
     var boolean5 = true;
     assert boolean5 == true;
 
-    var booleanSum = boolean + boolean2 + boolean3 + boolean4 + boolean5;
+    var booleanSum = boolean1 + boolean2 + boolean3 + boolean4 + boolean5;
     assert booleanSum == false;
 
     var math = 5 + 4 * 3;

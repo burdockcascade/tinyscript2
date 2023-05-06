@@ -8,7 +8,7 @@ fn helloworld() {
 
 #[test]
 fn variables() {
-    assert_eq!(compile_and_run(include_str!("01_variables.tny"), String::from("main"),Value::Array(vec![])).unwrap(), Value::Null);
+    assert_eq!(compile_and_run(include_str!("01_variables.tny"), String::from("main"), Value::Array(vec![])).unwrap(), Value::Null);
 }
 
 #[test]

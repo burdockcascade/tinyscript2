@@ -217,9 +217,9 @@ parser!(pub grammar parser() for str {
         / a:array_index() { a }
         / c:chain() { c }
         / new_object_call()
-        / i:identifier() { i }
         / n:null() { n }
         / b:boolean() { b }
+        / i:identifier() { i }
         / "\"" s:string() "\"" { Token::String(s) }
         / list()
         / json()
