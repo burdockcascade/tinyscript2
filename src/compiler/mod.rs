@@ -237,6 +237,7 @@ impl Function {
             Token::ForEach(item, array, stmts) => self.compile_foreach(item, array, stmts),
             Token::Return(expr) => self.compile_return(expr),
             Token::ForI(start, end, step, stmts) => self.compile_forloop(start, end, step, stmts),
+            Token::Comment(_) => {},
             _ => todo!("statement: {:?}", statement)
         }
     }

@@ -72,7 +72,7 @@ parser!(pub grammar parser() for str {
 
     // statements
     rule statements() -> Vec<Token>
-        = s:((single_statement() / control_flow())*) { s }
+        = s:((comment() / single_statement() / control_flow())*) { s }
 
     // single statements followed by a semicolon
     rule single_statement() -> Token
