@@ -3,8 +3,6 @@ use peg::parser;
 #[derive(Debug, Clone)]
 pub enum Token {
 
-    NoOp,
-
     Comment(String),
     Assert(Box<Token>),
     Import(String),
@@ -13,7 +11,6 @@ pub enum Token {
     Function(String, Vec<Token>, Vec<Token>),
     AnonFunction(Vec<Token>, Vec<Token>),
     Class(Box<Token>, Vec<Token>),
-    ClassMethodCall(String, String, Vec<Token>),
     Chain(Box<Token>, Vec<Token>),
     Identifier(String),
 

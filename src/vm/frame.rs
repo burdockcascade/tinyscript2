@@ -5,7 +5,7 @@ use crate::vm::value::Value;
 pub struct Frame {
     pub name: String,
     pub return_position: i32,
-    variables: Vec<Value>,
+    pub variables: Vec<Value>,
     pub stack: Vec<Value>,
 }
 
@@ -35,6 +35,7 @@ impl Frame {
         if variables.len() <= slot {
             variables.resize(slot + 1, Value::Null);
         }
+
         variables[slot] = value;
     }
 
@@ -45,7 +46,7 @@ impl Frame {
 
     pub fn pop_value_from_stack(&mut self) -> Value {
         trace!("pop value from stack");
-        let v = self.stack.pop().expect("value on stack");
+        let v = self.stack.pop().expect("stack should have a value");
         return v;
     }
 

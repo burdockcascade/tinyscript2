@@ -50,7 +50,8 @@ impl VM {
 
         // push new frame
         self.frames.push(Frame::new(String::from("main"), -1, vec![parameters]));
-        
+
+        // set current frame
         let mut current_frame = self.frames.get_mut(self.fp as usize).expect("no frame found");
 
         // run instructions
@@ -59,8 +60,9 @@ impl VM {
             let instruction = self.instructions.get(self.ip as usize).expect(&*format!("instruction #{} not found", self.ip));
 
             debug!("");
-            debug!( "== loop [fp:{}, ip:{} ({:?})]", self.fp, self.ip, instruction);
-            debug!("> frame {}, stack: {:?}", current_frame.name, current_frame.stack);
+            debug!( "== loop [fp:{} ({:?}), ip:{} ({:?})]", self.fp, current_frame.name, self.ip, instruction);
+            debug!("> variables: {:?}", current_frame.variables);
+            debug!("> stack: {:?}", current_frame.stack);
 
             match instruction {
 
@@ -85,12 +87,13 @@ impl VM {
 
                 Instruction::Call(arg_len) => {
 
-                    let name = current_frame.pop_value_from_stack().to_string();
-                    let func = self.functions.get(name.to_string().as_str()).expect("function not found");
-
-                    // cut args from stack and reverse order
+                    // cut args from stack and then reverse order
                     let mut args = current_frame.pop_values_from_stack(*arg_len as usize);
                     args.reverse();
+
+                    // pop functionref from stack
+                    let name = current_frame.pop_value_from_stack().to_string();
+                    let funcpos = *self.functions.get(name.to_string().as_str()).expect("function not found");
 
                     // frame name with fp
                     let fname = format!("{}[{}]", name, self.fp);
@@ -104,8 +107,8 @@ impl VM {
                     // set current frame
                     current_frame = self.frames.get_mut(self.fp as usize).expect("frame found");
 
-                    trace!("ip jumping from {} to {}", self.ip, func);
-                    self.ip = *func;
+                    trace!("ip jumping from {} to {}", self.ip, funcpos);
+                    self.ip = funcpos;
 
                 }
 
@@ -143,15 +146,15 @@ impl VM {
                 // Objects
 
                 Instruction::LoadObjectMember(member) => {
-                    // let object = current_frame.pop_value_from_stack();
-                    // match object {
-                    //     Value::Object(obj) => {
-                    //         let value = obj.get(member).expect(&*format!("member '{}' not found in object", member));
-                    //         trace!("pushing value '{}' onto stack", value);
-                    //         current_frame.push_value_to_stack(value.clone());
-                    //     },
-                    //     _ => unreachable!("{} is not an object", object)
-                    // }
+                    let object = current_frame.pop_value_from_stack();
+                    match object {
+                        Value::Object(obj) => {
+                            let value = obj.get(member).expect(&*format!("member '{}' not found in object", member));
+                            trace!("pushing value '{}' onto stack", value);
+                            current_frame.push_value_to_stack(value.clone());
+                        },
+                        _ => unreachable!("{} is not an object", object)
+                    }
                     self.ip += 1;
                 }
 

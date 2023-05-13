@@ -22,7 +22,7 @@ fn compile_functions() {
 
 #[test]
 fn compile_classes() {
-    compile(include_str!("05_classes.tny")).expect("does not compile");
+    compile(include_str!("05_class_simple.tny")).expect("does not compile");
 }
 
 #[test]
