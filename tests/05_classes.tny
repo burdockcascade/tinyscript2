@@ -33,6 +33,6 @@ function main(argv) {
 
     var man = new person();
 
-    print man.speak("hello");
+    man.speak("hello");
 
 }

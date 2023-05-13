@@ -4,18 +4,17 @@ use log::{debug, error, info, trace};
 
 use crate::vm::program::{Instruction, Program};
 use crate::vm::value::Value;
-use crate::vm::value::Value::{Null, ReturnFrame, ReturnPosition};
+use crate::vm::frame::Frame;
 
 pub mod value;
-pub mod program;
-
-const LOCAL_VARIABLE_OFFSET: i32 = 2;
+pub(crate) mod program;
+mod frame;
 
 // Virtual Machine
 pub struct VM {
     instructions: Vec<Instruction>,
     functions: HashMap<String, i32>,
-    stack: Vec<Value>,
+    frames: Vec<Frame>,
     ip: i32,
     fp: i32,
 }
@@ -26,7 +25,7 @@ impl VM {
         VM {
             instructions: program.instructions,
             functions: program.functions,
-            stack: vec![],
+            frames: vec![],
             ip: 0,
             fp: 0
         }
@@ -41,17 +40,18 @@ impl VM {
             self.ip = *self.functions.get(entry.as_str()).expect("no entry found");
         }
 
-        self.stack.push(Value::ReturnPosition(-1));
-        self.stack.push(Value::ReturnFrame(-1));
-        self.stack.push(parameters);
-
         trace!("{:?}", self.instructions);
 
         // do not run if no instructions
         if self.instructions.len() == 0 {
             debug!("no instructions to run");
-            return Ok(Null);
+            return Ok(Value::Null);
         }
+
+        // push new frame
+        self.frames.push(Frame::new(String::from("main"), -1, vec![parameters]));
+        
+        let mut current_frame = self.frames.get_mut(self.fp as usize).expect("no frame found");
 
         // run instructions
         loop {
@@ -59,13 +59,13 @@ impl VM {
             let instruction = self.instructions.get(self.ip as usize).expect(&*format!("instruction #{} not found", self.ip));
 
             debug!("");
-            debug!( "== loop [fp:{}, ip:{} ({:?}), stack:{}]", self.fp, self.ip, instruction, self.stack.len());
-            trace!(">> stack at start {:?}", self.stack);
+            debug!( "== loop [fp:{}, ip:{} ({:?})]", self.fp, self.ip, instruction);
+            debug!("> frame {}, stack: {:?}", current_frame.name, current_frame.stack);
 
             match instruction {
 
                 Instruction::Assert => {
-                    let output = self.stack.pop().expect("nothing on the stack to evaluate for assert");
+                    let output = current_frame.pop_value_from_stack();
                     trace!("asserting '{}' is true", output);
                     match output {
                         Value::Bool(val) => assert!(val),
@@ -76,7 +76,7 @@ impl VM {
                 }
 
                 Instruction::Print => {
-                    let output = self.stack.pop().expect("something should be on the stack to print");
+                    let output = current_frame.pop_value_from_stack();
                     println!("{:?}", output.to_string());
                     self.ip += 1;
                 }
@@ -85,29 +85,24 @@ impl VM {
 
                 Instruction::Call(arg_len) => {
 
-                    let name = self.stack.pop().expect("function ref should be on the stack");
+                    let name = current_frame.pop_value_from_stack().to_string();
+                    let func = self.functions.get(name.to_string().as_str()).expect("function not found");
 
-                    trace!("> calling '{}' with {} args", name, arg_len);
+                    // cut args from stack and reverse order
+                    let mut args = current_frame.pop_values_from_stack(*arg_len as usize);
+                    args.reverse();
 
-                    let func = self.functions.get(name.to_string().as_str()).expect(&*format!("function '{}' not found", name));
+                    // frame name with fp
+                    let fname = format!("{}[{}]", name, self.fp);
 
-                    // cut args
-                    let split_at = self.stack.len() - *arg_len as usize;
-                    let args = self.stack.split_off(split_at);
-                    trace!("args are {:?}", args);
-                    trace!("stack is {:?}", self.stack);
+                    // push new frame onto frames
+                    self.frames.push(Frame::new(fname, self.ip + 1, args));
 
-                    // Set the frame header
-                    let rp = Value::ReturnPosition(self.ip + 1);
-                    let rf = Value::ReturnFrame(self.fp);
-                    trace!("pushing frame header {:?} to stack", rp);
-                    trace!("pushing frame header {:?} to stack", rf);
-                    self.stack.push(rp);
-                    self.stack.push(rf);
-                    self.fp = (self.stack.len() - 2) as i32;
-                    trace!("set fp to {}", self.fp);
+                    // set fp to current stack length
+                    self.fp += 1;
 
-                    self.stack.extend(args);
+                    // set current frame
+                    current_frame = self.frames.get_mut(self.fp as usize).expect("frame found");
 
                     trace!("ip jumping from {} to {}", self.ip, func);
                     self.ip = *func;
@@ -116,40 +111,48 @@ impl VM {
 
                 Instruction::ReturnValue => {
 
-                    let ret = self.stack.pop().unwrap();
-                    trace!("popped return {}", ret);
+                    trace!("returning from {} to position {}", current_frame.name, current_frame.return_position);
 
-                    trace!("clearing out stack upto {}", self.fp + 2);
-                    self.stack.truncate((self.fp + 2) as usize);
+                    let return_value = current_frame.pop_value_from_stack();
+                    trace!("popped return {}", return_value);
 
-                    let (rp, rf) = self.pop_2_values();
-
-                    match rp {
-                        ReturnPosition(pos) => {
-                            trace!("setting instruction position to {}", pos);
-                            self.ip = pos
-                        },
-                        _ => unreachable!("{} is not a return position", rp),
+                    if current_frame.return_position < 0 {
+                        trace!("returning {} from {}", return_value, current_frame.name);
+                        return Ok(return_value);
                     }
 
-                    match rf {
-                        ReturnFrame(pos) => {
-                            trace!("setting frame position to {}", pos);
-                            self.fp = pos;
-                        },
-                        _ => unreachable!("{} is not a return frame", rf),
-                    }
+                    // set instruction back to previous location
+                    trace!("ip jumping from {} to {}", self.ip, current_frame.return_position);
+                    self.ip = current_frame.return_position;
 
-                    if self.fp == -1 {
-                        trace!("HALT!");
-                        self.stack.clear();
-                        break;
-                    }
+                    // decrement fp
+                    trace!("decrementing fp from {} to {}", self.fp, self.fp - 1);
+                    self.fp -= 1;
 
-                    trace!("pushing {:?} onto stack as return value", ret);
-                    self.stack.push(ret);
-                    trace!("returning to {}", self.ip);
+                    // remove last frame
+                    self.frames.pop();
 
+                    // set new current frame
+                    current_frame = self.frames.get_mut(self.fp as usize).expect("no frame found");
+
+                    // push return value onto stack
+                    current_frame.push_value_to_stack(return_value);
+
+                }
+
+                // Objects
+
+                Instruction::LoadObjectMember(member) => {
+                    // let object = current_frame.pop_value_from_stack();
+                    // match object {
+                    //     Value::Object(obj) => {
+                    //         let value = obj.get(member).expect(&*format!("member '{}' not found in object", member));
+                    //         trace!("pushing value '{}' onto stack", value);
+                    //         current_frame.push_value_to_stack(value.clone());
+                    //     },
+                    //     _ => unreachable!("{} is not an object", object)
+                    // }
+                    self.ip += 1;
                 }
 
                 // CONDITIONS
@@ -160,92 +163,44 @@ impl VM {
                 }
 
                 Instruction::JumpIfTrue(delta) => {
-
-                    let b = self.stack.pop().expect("nothing on the stack to pop");
-
-                    match b {
-                        Value::Bool(false) => {
-                            trace!("condition false");
-                            self.ip += 1;
-                        }
-                        Value::Bool(true) => {
-                            trace!("condition true. moving instruction pointer by {}", delta);
-                            self.ip += delta;
-                        }
-                        _ => unreachable!()
-                    }
-
+                    let b = current_frame.pop_value_from_stack();
+                    self.ip += if b == Value::Bool(true) { *delta } else { 1 };
                 }
 
                 Instruction::JumpIfFalse(delta) => {
-
-                    let b = self.stack.pop().expect("nothing on the stack to pop");
-
-                    match b {
-                        Value::Bool(true) => {
-                            trace!("condition true");
-                            self.ip += 1;
-                        }
-                        Value::Bool(false) => {
-                            trace!("condition false. moving instruction pointer by {}", delta);
-                            self.ip += delta;
-                        }
-                        _ => unreachable!()
-                    }
-
+                    let b = current_frame.pop_value_from_stack();
+                    self.ip += if b == Value::Bool(false) { *delta } else { 1 };
                 }
 
-                // STACK AND VARIABLES
-
-                Instruction::ExtendStackSize(size) => {
-                    trace!("extending stack by {:?}", size);
-                    self.stack.resize(self.stack.len() + *size as usize, Value::Null);
-                    self.ip += 1
-                }
-
-                Instruction::StackPop(length) => {
-                    self.stack.truncate(self.stack.len() - *length as usize);
-                    self.ip += 1
-                }
-
+                // Push value onto stack
                 Instruction::Push(variant) => {
                     trace!("pushing {:?} into stack", variant);
-                    self.stack.push(variant.clone());
+                    current_frame.push_value_to_stack(variant.clone());
                     self.ip += 1
                 }
 
+                // get value from stack and store in variable
                 Instruction::StoreLocalVariable(index) => {
-
-                    let x = LOCAL_VARIABLE_OFFSET + index;
-
-                    let v = self.stack.pop().expect("no value on stack");
-                    trace!("moving {:?} from stack to variable {} ({})", v, x, (self.fp + x));
-
-                    let pos = (self.fp + x) as usize;
-
-                    if pos >= self.stack.len() {
-                        self.stack.push(Null);
-                    }
-
-                    self.stack[pos] = v;
+                    current_frame.move_from_stack_to_variable_slot(*index as usize);
                     self.ip += 1;
                 }
 
+                // get value from variable and push onto stack
                 Instruction::LoadLocalVariable(index) => {
-                    let var = self.stack.get((self.fp + LOCAL_VARIABLE_OFFSET + index) as usize).expect("variable should exist");
+                    let var = current_frame.get_variable_or_panic(*index as usize);
                     trace!("copying {} from variable {} onto stack", var, index);
-                    self.stack.push(var.clone());
+                    current_frame.push_value_to_stack(var.clone());
                     self.ip += 1;
                 }
 
                 // ARRAYS
 
                 Instruction::ArrayAdd => {
-                    let (array, value) = self.pop_2_values();
+                    let (array, value) = current_frame.pop_2_values();
 
                     if let Value::Array(mut v) = array {
                         v.push(value);
-                        self.stack.push(Value::Array(v));
+                        current_frame.push_value_to_stack(Value::Array(v));
                     }
 
                     self.ip += 1;
@@ -254,17 +209,17 @@ impl VM {
 
                 Instruction::LoadIndexedValue => {
 
-                    let (v, index) = self.pop_2_values();
+                    let (v, index) = current_frame.pop_2_values();
                     trace!("looking up {:?} in {:?}", index, v);
 
                     match (v, index) {
                         (Value::Array(items), Value::Integer(idx)) => {
                             let item = items[idx as usize].clone();
-                            self.stack.push(item);
+                            current_frame.push_value_to_stack(item);
                         },
                         (Value::Dictionary(keys), Value::String(key)) => {
                             let item = keys.get(&*key).expect(&*format!("key {} does not exist in dictionary", key.as_str())).clone();
-                            self.stack.push(item);
+                            current_frame.push_value_to_stack(item);
                         },
                         _ => {
                             error!("variable has no index");
@@ -277,10 +232,10 @@ impl VM {
 
                 Instruction::ArrayLength => {
 
-                    let v = self.stack.pop().expect("no value to pop");
+                    let v = current_frame.pop_value_from_stack();
 
                     match v {
-                        Value::Array(val) => self.stack.push(Value::Integer(val.len() as i32)),
+                        Value::Array(val) => current_frame.push_value_to_stack(Value::Integer(val.len() as i32)),
                         _ => unreachable!("can not get length on non-array {}", v)
                     }
 
@@ -289,12 +244,12 @@ impl VM {
                 }
 
                 Instruction::DictionaryAdd => {
-                    let (key, value) = self.pop_2_values();
-                    let dict = self.stack.pop().expect("dictionary should be on the stack");
+                    let (key, value) = current_frame.pop_2_values();
+                    let dict = current_frame.pop_value_from_stack();
 
                     if let Value::Dictionary(mut v) = dict {
                         v.insert(key.to_string(), value);
-                        self.stack.push(Value::Dictionary(v));
+                        current_frame.push_value_to_stack(Value::Dictionary(v));
                     }
 
                     self.ip += 1;
@@ -303,30 +258,30 @@ impl VM {
                 // ARITHMETIC
 
                 Instruction::Add => {
-                    let (lhs, rhs) = self.pop_2_values();
+                    let (lhs, rhs) = current_frame.pop_2_values();
                     trace!("adding {:?} and {:?}", lhs, rhs);
-                    self.stack.push(lhs + rhs);
+                    current_frame.push_value_to_stack(lhs + rhs);
                     self.ip += 1;
                 }
 
                 Instruction::Sub => {
-                    let (lhs, rhs) = self.pop_2_values();
+                    let (lhs, rhs) = current_frame.pop_2_values();
                     trace!(" subtracting {:?} from {:?}", rhs, lhs);
-                    self.stack.push(lhs - rhs);
+                    current_frame.push_value_to_stack(lhs - rhs);
                     self.ip += 1;
                 }
 
                 Instruction::Multiply => {
-                    let (lhs, rhs) = self.pop_2_values();
+                    let (lhs, rhs) = current_frame.pop_2_values();
                     trace!("multiplying {:?} and {:?}", rhs, lhs);
-                    self.stack.push(lhs * rhs);
+                    current_frame.push_value_to_stack(lhs * rhs);
                     self.ip += 1;
                 }
 
                 Instruction::Divide => {
-                    let (lhs, rhs) = self.pop_2_values();
+                    let (lhs, rhs) = current_frame.pop_2_values();
                     trace!("dividing {:?} by {:?}", lhs, rhs);
-                    self.stack.push(lhs / rhs);
+                    current_frame.push_value_to_stack(lhs / rhs);
                     self.ip += 1;
                 }
 
@@ -339,44 +294,44 @@ impl VM {
                 // OPERANDS
 
                 Instruction::Equal => {
-                    let (lhs, rhs) = self.pop_2_values();
+                    let (lhs, rhs) = current_frame.pop_2_values();
                     trace!("equal {:?} and {:?}",  lhs, rhs);
-                    self.stack.push(Value::Bool(lhs == rhs));
+                    current_frame.push_value_to_stack(Value::Bool(lhs == rhs));
                     self.ip += 1;
                 }
 
                 Instruction::NotEqual => {
-                    let (lhs, rhs) = self.pop_2_values();
+                    let (lhs, rhs) = current_frame.pop_2_values();
                     trace!("not equal {:?} and {:?}", lhs, rhs);
-                    self.stack.push(Value::Bool(lhs != rhs));
+                    current_frame.push_value_to_stack(Value::Bool(lhs != rhs));
                     self.ip += 1;
                 }
 
                 Instruction::LessThan => {
-                    let (lhs, rhs) = self.pop_2_values();
+                    let (lhs, rhs) = current_frame.pop_2_values();
                     trace!("comparing {:?} less than {:?}", rhs, lhs);
-                    self.stack.push(Value::Bool(lhs < rhs));
+                    current_frame.push_value_to_stack(Value::Bool(lhs < rhs));
                     self.ip += 1;
                 }
 
                 Instruction::LessThanOrEqual => {
-                    let (lhs, rhs) = self.pop_2_values();
+                    let (lhs, rhs) = current_frame.pop_2_values();
                     trace!("comparing {:?} less than {:?}", rhs, lhs);
-                    self.stack.push(Value::Bool(lhs <= rhs));
+                    current_frame.push_value_to_stack(Value::Bool(lhs <= rhs));
                     self.ip += 1;
                 }
 
                 Instruction::GreaterThan => {
-                    let (lhs, rhs) = self.pop_2_values();
+                    let (lhs, rhs) = current_frame.pop_2_values();
                     trace!("comparing {:?} greater than {:?}",  lhs, rhs);
-                    self.stack.push(Value::Bool(lhs > rhs));
+                    current_frame.push_value_to_stack(Value::Bool(lhs > rhs));
                     self.ip += 1;
                 }
 
                 Instruction::GreaterThanOrEqual => {
-                    let (lhs, rhs) = self.pop_2_values();
+                    let (lhs, rhs) = current_frame.pop_2_values();
                     trace!("comparing {:?} greater than {:?}",  lhs, rhs);
-                    self.stack.push(Value::Bool(lhs >= rhs));
+                    current_frame.push_value_to_stack(Value::Bool(lhs >= rhs));
                     self.ip += 1;
                 }
 
@@ -387,6 +342,8 @@ impl VM {
                     break;
                 }
 
+                _ => unreachable!("unknown instruction {:?}", instruction)
+
             }
 
             if self.ip == self.instructions.len() as i32 {
@@ -394,30 +351,12 @@ impl VM {
                 break;
             }
 
-            trace!(">> stack at end {:?}", self.stack);
+            trace!(">> stack at end {:?}", current_frame.stack);
 
         }
 
-        Ok(self.stack.pop().or(Option::from(Value::Null)).unwrap())
+        Ok(current_frame.pop_value_from_stack())
 
     }
-
-    fn pop_2_values(&mut self) -> (Value, Value) {
-        let rhs = self.stack.pop().expect("no 1st value on ops stack");
-        let lhs = self.stack.pop().expect("no 2nd value on ops stack");
-        return (lhs, rhs);
-    }
-
-}
-
-#[cfg(test)]
-mod test {
-    use crate::vm::program::Instruction::*;
-    use crate::vm::program::Program;
-    use crate::vm::value::Value;
-    use crate::vm::VM;
-
-
-
-
+    
 }

@@ -54,7 +54,7 @@ impl Display for Value {
             Value::String(string) => write!(f, "{string}"),
             Value::Array(_val) => write!(f, "Array"),
             Value::FunctionRef(name) => write!(f, "{name}"),
-            _ => write!(f, "todo"),
+            _ => write!(f, "todo for {:?}", self),
         }
     }
 }

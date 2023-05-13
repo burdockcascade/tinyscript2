@@ -215,6 +215,7 @@ parser!(pub grammar parser() for str {
         / i:integer() { Token::Integer(i) }
         / c:anonfunc() { c }
         / a:array_index() { a }
+        / c:call() { c }
         / c:chain() { c }
         / new_object_call()
         / n:null() { n }

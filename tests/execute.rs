@@ -22,6 +22,11 @@ fn functions() {
 }
 
 #[test]
+fn fibonacci() {
+    assert_eq!(compile_and_run(include_str!("06_fib.tny"), String::from("main"),Value::Array(vec![])).unwrap(), Value::Null);
+}
+
+#[test]
 fn classes() {
     assert_eq!(compile_and_run(include_str!("05_classes.tny"), String::from("main"),Value::Array(vec![])).unwrap(), Value::Null);
 }

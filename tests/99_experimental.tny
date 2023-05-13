@@ -1,5 +1,14 @@
-function main(argv) {
 
-    var boolean1 = true;
 
+function main() {
+    stacky(3);
+}
+
+function stacky(s) {
+
+    if s == 0 {
+        return false;
+    }
+
+    stacky(s - 1);
 }

@@ -1,5 +1,15 @@
 function main(args) {
 
+    test_strings();
+    test_numbers();
+    test_floats();
+    test_booleans();
+    test_math();
+
+}
+
+function test_strings() {
+
     var myFirstName = "Sanela";
     assert myFirstName == "Sanela";
 
@@ -17,6 +27,10 @@ function main(args) {
 
     var myStory = "My name is " + myFullName + " and I am " + myAge + " years old. I was born in " + myHomeTown + " and I really like it there.";
     assert myStory == "My name is Sanela Kurtovic and I am 30 years old. I was born in Sarajevo and I really like it there.";
+
+}
+
+function test_numbers() {
 
     var number = 5;
     assert number == 5;
@@ -39,6 +53,10 @@ function main(args) {
     var average = sum / 5;
     assert average == 15;
 
+}
+
+function test_floats() {
+
     var float = 3.14;
     assert float == 3.14;
 
@@ -60,6 +78,10 @@ function main(args) {
     var floatAverage = floatSum / 5;
     assert floatAverage == 7.47;
 
+}
+
+function test_booleans() {
+
     var boolean1 = true;
     assert boolean1 == true;
 
@@ -77,6 +99,10 @@ function main(args) {
 
     var booleanSum = boolean1 + boolean2 + boolean3 + boolean4 + boolean5;
     assert booleanSum == false;
+
+}
+
+function test_math() {
 
     var math = 5 + 4 * 3;
     assert math == 17;

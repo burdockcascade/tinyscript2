@@ -6,6 +6,10 @@ function func1(bool, ignore_this_param) {
     assert bool;
 }
 
+function i_return_what_you_give_me(b) {
+    return b;
+}
+
 function ignore_me() { assert false; }
 
 function execute(fn) {
@@ -20,11 +24,18 @@ function loopy(b) {
         assert item >= 1;
         b_count = b_count + 1;
     }
+
+    return b_count;
 }
 
-function main(argv) {
+function do_loopy(val) {
+    return loopy(val);
+}
 
-    loopy([1,2,4,5,7,8,9]);
+
+function main() {
+    var count = do_loopy([1,2,4,5,7,8,9]);
+    assert count == 7;
 
     func1(true, false);
 
@@ -44,6 +55,8 @@ function main(argv) {
         assert true;
     });
 
+    assert i_return_what_you_give_me(true);
+
     var table = {
         "f1": function(b5) {
             assert b5;
@@ -53,4 +66,14 @@ function main(argv) {
     var func1 = table["f1"];
     func1(true);
 
+    stacky(100);
+
+}
+
+function stacky(s) {
+    if s == 0 {
+        return false;
+    }
+
+    stacky(s - 1);
 }

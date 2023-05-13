@@ -20,11 +20,11 @@ pub enum Instruction {
     Push(Value),
     StoreLocalVariable(i32),
     LoadLocalVariable(i32),
-    ExtendStackSize(i32),
     StackPop(i32),
 
     // Arrays & Dictionaries
     LoadIndexedValue,
+    LoadObjectMember(String),
     ArrayLength,
     ArrayAdd,
     DictionaryAdd,

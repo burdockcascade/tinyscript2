@@ -1,3 +1,4 @@
+use std::arch::asm;
 use std::collections::HashMap;
 use std::fs;
 use std::rc::Rc;
@@ -21,7 +22,8 @@ struct Function {
     name: String,
     instructions: Vec<Instruction>,
     anonymous_functions: Vec<Token>,
-    variables: HashMap<String, i32>
+    variables: HashMap<String, i32>,
+    classes: HashMap<String, HashMap<String, Value>>,
 }
 
 impl Compiler {
@@ -183,13 +185,13 @@ impl Function {
             name: name.to_string(),
             instructions: vec![],
             anonymous_functions: vec![],
-            variables: HashMap::default()
+            variables: HashMap::default(),
+            classes: classes,
         };
 
         // extend the stack size
         let pos = f.instructions.len() as i32;
         let sz = f.variables.len() as i32;
-        f.instructions.push(Instruction::ExtendStackSize(sz));
 
         // store the parameters as variables
         for param in params {
@@ -208,9 +210,6 @@ impl Function {
                 f.instructions.push(Instruction::ReturnValue)
             },
         }
-
-        // set the stack size
-        f.instructions[pos as usize] = Instruction::ExtendStackSize(f.variables.len() as i32);
 
         return f;
 
@@ -237,9 +236,48 @@ impl Function {
             Token::ForEach(item, array, stmts) => self.compile_foreach(item, array, stmts),
             Token::Return(expr) => self.compile_return(expr),
             Token::ForI(start, end, step, stmts) => self.compile_forloop(start, end, step, stmts),
+            Token::Chain(start, chain) => self.compile_chain(start, chain),
             Token::Comment(_) => {},
             _ => todo!("statement: {:?}", statement)
         }
+    }
+
+    // compile a chain of statements
+    fn compile_chain(&mut self, start: &Token, chain: &[Token]) {
+
+        // load the start of the chain
+        trace!("compiling chain start {:?}", start);
+        self.compile_expression(start);
+
+        // for each item in chain
+        for item in chain {
+
+            trace!("compiling chain item {:?}", item);
+
+            // push load object member instruction onto stack
+            match item {
+                Token::Variable(name, _) => self.instructions.push(Instruction::LoadObjectMember(name.to_string())),
+                Token::Call(name, args) => {
+
+                    // load the object member
+                    trace!("loading object member {:?}", name);
+                    self.instructions.push(Instruction::LoadObjectMember(name.to_string()));
+
+                    // compile the arguments
+                    for arg in args {
+                        self.compile_expression(arg);
+                    }
+
+                    // call the function
+                    trace!("calling function with {} args", args.len());
+                    self.instructions.push(Instruction::Call(args.len() as i32));
+
+                },
+                _ => unreachable!("chain item is not a variable or index")
+            }
+
+        }
+
     }
 
     // compile an assert statement
@@ -517,9 +555,14 @@ impl Function {
 
             }
 
-            Token::Object(class, params) => {
-                trace!("class = {:?}, params = {:?}", class, params);
-                self.instructions.push(Instruction::Push(Value::Object(Rc::new(HashMap::default()))));
+            Token::Object(class_name, params) => {
+                trace!("class = {:?}, params = {:?}", class_name, params);
+
+                // find class
+                let class = self.classes.get(class_name.to_string().as_str()).unwrap().clone();
+
+                // create object
+                self.instructions.push(Instruction::Push(Value::Object(Rc::new(class))));
             }
 
             Token::Index(id, indexes) => {
