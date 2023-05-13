@@ -34,6 +34,7 @@ function do_loopy(val) {
 
 
 function main() {
+
     var count = do_loopy([1,2,4,5,7,8,9]);
     assert count == 7;
 
