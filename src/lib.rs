@@ -1,8 +1,8 @@
 use log::LevelFilter;
 use simplelog::{ColorChoice, Config, TerminalMode, TermLogger};
-
 use crate::compiler::{Compiler, frontend};
 use crate::compiler::frontend::Token;
+
 use crate::vm::program::Program;
 use crate::vm::value::Value;
 use crate::vm::VM;

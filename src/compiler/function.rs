@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use log::{error, trace};
 use crate::compiler::frontend::Token;
-use crate::vm::program::Instruction;
+use crate::vm::instruction::Instruction;
 use crate::vm::value::Value;
 
 // Function
@@ -37,13 +37,9 @@ impl Function {
         // compile the statements
         f.compile_statements(statements);
 
-        // add a return value if there isn't one
-        match f.instructions.last().expect("instructions") {
-            Instruction::ReturnValue => {},
-            _ => {
-                f.instructions.push(Instruction::Push(Value::Null));
-                f.instructions.push(Instruction::ReturnValue)
-            },
+        // if tha last instruction is not a return then add one
+        if matches!(f.instructions.last(), Some(Instruction::Return(_))) == false {
+            f.instructions.push(Instruction::Return(false));
         }
 
         return f;
@@ -532,7 +528,7 @@ impl Function {
     // compile a return statement
     fn compile_return(&mut self, expr: &Box<Token>) {
         self.compile_expression(expr);
-        self.instructions.push(Instruction::ReturnValue);
+        self.instructions.push(Instruction::Return(true));
     }
 
     // create a new temporary variable
