@@ -27,7 +27,7 @@ impl VM {
     pub fn new(program: Program) -> Self {
         VM {
             instructions: program.instructions,
-            functions: program.functions,
+            functions: program.symbols,
             globals: program.globals,
             frames: vec![],
             ip: 0

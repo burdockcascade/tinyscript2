@@ -154,7 +154,7 @@ impl Compiler {
             trace!("compiling function {} ", func.get_name());
 
             // add the function to the program
-            p.functions.insert(func.get_name().clone(), p.instructions.len() as i32);
+            p.symbols.insert(func.get_name().clone(), p.instructions.len() as i32);
 
             // add the instructions of the function to the program
             p.instructions.extend(func.get_instructions().clone());

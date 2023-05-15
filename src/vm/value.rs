@@ -25,8 +25,7 @@ pub enum Value {
     ReturnFrame(i32),
 
     IndexPath(Vec<Value>),
-    FunctionRef(String),
-    VariableRef(i32)
+    FunctionRef(String)
 }
 
 // function for finding Value by parameter. if its a number then return integer, if its a string then return string, etc.

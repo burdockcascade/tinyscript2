@@ -6,7 +6,7 @@ pub struct Frame {
     name: String,
     return_position: i32,
     variables: Vec<Value>,
-    stack: Vec<Value>,
+    data: Vec<Value>,
 }
 
 impl Frame {
@@ -20,7 +20,7 @@ impl Frame {
             name,
             return_position,
             variables: args,
-            stack: vec![],
+            data: vec![],
         }
     }
 
@@ -44,13 +44,13 @@ impl Frame {
     // print debug info
     pub fn print_stack_and_variables(&self) {
         debug!("variables: {:?}", self.variables);
-        debug!("stack: {:?}", self.stack);
+        debug!("stack: {:?}", self.data);
     }
 
     // push a value to the stack
     pub fn push_value_to_stack(&mut self, value: Value) {
         trace!("push value {:?} to stack", value);
-        self.stack.push(value);
+        self.data.push(value);
     }
 
     // push a value to a variable slot
@@ -81,7 +81,7 @@ impl Frame {
 
     // pop a value from the stack
     pub fn pop_value_from_stack(&mut self) -> Value {
-        let value = self.stack.pop().expect("stack should have a value");
+        let value = self.data.pop().expect("stack should have a value");
         trace!("pop value {:?} from stack", value);
         return value;
     }
@@ -134,8 +134,8 @@ mod tests {
     fn test_push_value_to_stack() {
         let mut frame = Frame::new("test".to_string(), 0, vec![]);
         frame.push_value_to_stack(Value::Float(1.0));
-        assert_eq!(frame.stack.len(), 1);
-        assert_eq!(frame.stack[0], Value::Float(1.0));
+        assert_eq!(frame.data.len(), 1);
+        assert_eq!(frame.data[0], Value::Float(1.0));
     }
 
     #[test]
@@ -160,8 +160,8 @@ mod tests {
         let mut frame = Frame::new("test".to_string(), 0, vec![]);
         frame.push_value_to_variable_slot(0, Value::Float(1.0));
         frame.copy_from_variable_slot_to_stack(0);
-        assert_eq!(frame.stack.len(), 1);
-        assert_eq!(frame.stack[0], Value::Float(1.0));
+        assert_eq!(frame.data.len(), 1);
+        assert_eq!(frame.data[0], Value::Float(1.0));
     }
 
     #[test]
