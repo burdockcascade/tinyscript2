@@ -12,6 +12,8 @@ pub enum Instruction {
     Push(Value),
     StoreLocalVariable(i32),
     LoadLocalVariable(i32),
+    LoadGlobal(i32),
+    CreateObject,
     StackPop(i32),
 
     // Arrays & Dictionaries

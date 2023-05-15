@@ -11,13 +11,13 @@ pub struct Function {
     instructions: Vec<Instruction>,
     anonymous_functions: Vec<Token>,
     variables: HashMap<String, i32>,
-    classes: HashMap<String, HashMap<String, Value>>
+    global_lookup: HashMap<String, i32>,
 }
 
 
 impl Function {
 
-    pub fn new(name: &String, params: &[Token], statements: &[Token], classes: HashMap<String, HashMap<String, Value>>) -> Self {
+    pub fn new(name: &String, params: &[Token], statements: &[Token], global_lookup: HashMap<String, i32>) -> Self {
 
         trace!("compiling function '{}' with parameters {:?}", name, params);
 
@@ -27,7 +27,7 @@ impl Function {
             instructions: vec![],
             anonymous_functions: vec![],
             variables: HashMap::default(),
-            classes,
+            global_lookup,
         };
 
         // store the parameters as variables
@@ -337,10 +337,13 @@ impl Function {
         trace!("class = {:?}, params = {:?}", class_name, params);
 
         // find class
-        let class = self.classes.get(class_name.as_str()).unwrap().clone();
+        let global_id = self.global_lookup.get(&class_name).unwrap();
+
+        // load global
+        self.instructions.push(Instruction::LoadGlobal(*global_id));
 
         // create object
-        self.instructions.push(Instruction::Push(Value::Object(Rc::new(class))));
+        self.instructions.push(Instruction::CreateObject);
 
     }
 

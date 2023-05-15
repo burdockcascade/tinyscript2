@@ -14,19 +14,22 @@ mod token;
 // Compiler
 pub struct Compiler {
     functions: Vec<Function>,
-    classes: HashMap<String, HashMap<String, Value>>,
+    global_lookup: HashMap<String, i32>,
 }
 
 impl Compiler {
 
     pub fn new() -> Self {
         Compiler {
-            classes: HashMap::new(),
-            functions: vec![]
+            functions: vec![],
+            global_lookup: Default::default(),
         }
     }
 
     pub fn compile(mut self, program: String) -> Result<Program, String> {
+
+        // create a new program
+        let mut p = Program::new();
 
         // Tokenize Code
         let script: Vec<Token> = frontend::parser::script(program.as_str()).map_err(|e| e.to_string())?;
@@ -77,8 +80,9 @@ impl Compiler {
                         }
                     }
 
-                    // insert the class into the classes hashmap
-                    self.classes.insert(class_name.to_string(), object.clone());
+                    // insert the class into the globals
+                    let global_index = p.insert_global(Value::Class(object.clone()));
+                    self.global_lookup.insert(class_name.to_string(), global_index);
 
                     // log class name and object
                     trace!("storing class {:?} with object '{:?}'", class_name.to_string(), object);
@@ -107,7 +111,7 @@ impl Compiler {
                                 new_params.insert(0,Token::Identifier(String::from("this")));
 
                                 // create a new function with the new name
-                                let func = Function::new(&new_name, new_params.as_slice(), statements.as_slice(), self.classes.clone());
+                                let func = Function::new(&new_name, new_params.as_slice(), statements.as_slice(), self.global_lookup.clone());
                                 self.functions.push(func);
                             },
                             _ => {}
@@ -119,7 +123,7 @@ impl Compiler {
                     // compile new function
                     debug!("compiling function {}", func_name);
                     trace!("{} parameters and {} statements", params.len(), items.len());
-                    let f = Function::new(func_name, params.as_slice(), items.as_slice(),self.classes.clone());
+                    let f = Function::new(func_name, params.as_slice(), items.as_slice(),self.global_lookup.clone());
 
                     // compile anonymous functions
                     for af in f.get_anonymous_functions().iter() {
@@ -128,7 +132,7 @@ impl Compiler {
                             Token::Function(anon_name, params, statements) => {
                                 debug!("compiling anonymous function {}", anon_name);
                                 trace!("{} parameters and {} statements", params.len(), statements.len());
-                                self.functions.push(Function::new(&anon_name, params.as_slice(), statements.as_slice(),self.classes.clone()));
+                                self.functions.push(Function::new(&anon_name, params.as_slice(), statements.as_slice(),self.global_lookup.clone()));
                             }
                             _ => unreachable!("anonymous function is not a function")
                         }
@@ -141,12 +145,6 @@ impl Compiler {
                 _ => {}
             }
         }
-
-        // create a new program
-        let mut p = Program {
-            instructions: vec![],
-            functions: Default::default(),
-        };
 
         // Compile function instructions into one program
         debug!("Compiling program");

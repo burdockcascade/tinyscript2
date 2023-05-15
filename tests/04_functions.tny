@@ -16,6 +16,18 @@ function execute(fn) {
     fn(true);
 }
 
+class ignore_me_too {
+    function ignore_me() {
+        assert false;
+    }
+}
+
+class and_ignore_me {
+    function ignore_me() {
+        assert false;
+    }
+}
+
 class loops {
 
     function loopy(b) {

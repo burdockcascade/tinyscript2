@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use log::{debug, error, info, trace};
 
@@ -17,6 +18,7 @@ pub struct VM {
     instructions: Vec<Instruction>,
     functions: HashMap<String, i32>,
     frames: Vec<Frame>,
+    globals: Vec<Value>,
     ip: i32,
 }
 
@@ -26,6 +28,7 @@ impl VM {
         VM {
             instructions: program.instructions,
             functions: program.functions,
+            globals: program.globals,
             frames: vec![],
             ip: 0
         }
@@ -139,8 +142,19 @@ impl VM {
 
                 }
 
-                // Objects
+                // create object from class
+                Instruction::CreateObject => {
+                    let class = frame.pop_value_from_stack();
+                    match class {
+                        Value::Class(class) => {
+                            frame.push_value_to_stack(Value::Object(Rc::new(class.clone())));
+                        },
+                        _ => unreachable!("{} is not a class", class)
+                    }
+                    self.ip += 1;
+                }
 
+                // load member from object
                 Instruction::LoadObjectMember(member) => {
                     let object = frame.pop_value_from_stack();
                     match object {
@@ -191,8 +205,15 @@ impl VM {
                     self.ip += 1;
                 }
 
-                // ARRAYS
+                // load from global
+                Instruction::LoadGlobal(index) => {
+                    let value = self.globals.get(*index as usize).expect(&*format!("global '{}' not found", index));
+                    frame.push_value_to_stack(value.clone());
+                    self.ip += 1;
+                }
 
+
+                // add value to array
                 Instruction::ArrayAdd => {
                     let (array, value) = frame.pop_2_values_from_stack();
 

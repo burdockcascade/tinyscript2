@@ -17,6 +17,7 @@ pub enum Value {
     String(String),
     Array(Vec<Value>),
     Dictionary(HashMap<String, Value>),
+    Class(HashMap<String, Value>),
     Object(Rc<HashMap<String, Value>>),
 
     // Return
