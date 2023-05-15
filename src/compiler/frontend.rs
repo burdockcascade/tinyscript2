@@ -6,11 +6,18 @@ parser!(pub grammar parser() for str {
 
     // top level rule
     pub rule script() -> Vec<Token>
-        = WHITESPACE() f:(import() / class() / function() / comment())* WHITESPACE() { f }
+        = WHITESPACE() f:(import()
+        / class()
+        / function()
+        / comment()
+    )* WHITESPACE() { f }
 
     // statements
     rule statements() -> Vec<Token>
-        = s:((comment() / single_statement() / control_flow())*) { s }
+        = s:((comment()
+        / single_statement()
+        / control_flow()
+    )*) { s }
 
     // single statements followed by a semicolon
     rule single_statement() -> Token

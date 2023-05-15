@@ -13,13 +13,14 @@ pub enum Token {
     Chain(Box<Token>, Vec<Token>),
     Identifier(String),
 
+    Variable(String, Box<Token>),
+    Assign(String, Box<Token>),
+
     Null,
     Integer(i32),
     Float(f32),
     Bool(bool),
     String(String),
-    Variable(String, Box<Token>),
-    Assign(String, Box<Token>),
     Array(Vec<Token>),
     Object(Box<Token>, Vec<Token>),
 
