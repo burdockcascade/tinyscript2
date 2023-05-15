@@ -28,7 +28,7 @@ fn fibonacci() {
 
 #[test]
 fn class_simple() {
-    assert_eq!(compile_and_run(include_str!("05_class_simple.tny"), String::from("main"), Value::Array(vec![])).unwrap(), Value::Null);
+    assert_eq!(compile_and_run(include_str!("05_class.tny"), String::from("main"), Value::Array(vec![])).unwrap(), Value::Null);
 }
 
 #[test]

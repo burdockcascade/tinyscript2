@@ -1,110 +1,116 @@
 function main(args) {
 
-    test_strings();
-    test_numbers();
-    test_floats();
-    test_booleans();
-    test_math();
+    var test = new test_variables();
+
+    test.test_strings();
+    test.test_numbers();
+    test.test_floats();
+    test.test_booleans();
+    test.test_math();
 
 }
 
-function test_strings() {
+class test_variables {
 
-    var myFirstName = "Sanela";
-    assert myFirstName == "Sanela";
+    function test_strings() {
 
-    var myLastName = "Kurtovic";
-    assert myLastName == "Kurtovic";
+        var myFirstName = "Sanela";
+        assert myFirstName == "Sanela";
 
-    var myHomeTown = "Sarajevo";
-    assert myHomeTown == "Sarajevo";
+        var myLastName = "Kurtovic";
+        assert myLastName == "Kurtovic";
 
-    var myAge = 30;
-    assert myAge == 30;
+        var myHomeTown = "Sarajevo";
+        assert myHomeTown == "Sarajevo";
 
-    var myFullName = myFirstName + " " + myLastName;
-    assert myFullName == "Sanela Kurtovic";
+        var myAge = 30;
+        assert myAge == 30;
 
-    var myStory = "My name is " + myFullName + " and I am " + myAge + " years old. I was born in " + myHomeTown + " and I really like it there.";
-    assert myStory == "My name is Sanela Kurtovic and I am 30 years old. I was born in Sarajevo and I really like it there.";
+        var myFullName = myFirstName + " " + myLastName;
+        assert myFullName == "Sanela Kurtovic";
 
-}
+        var myStory = "My name is " + myFullName + " and I am " + myAge + " years old. I was born in " + myHomeTown + " and I really like it there.";
+        assert myStory == "My name is Sanela Kurtovic and I am 30 years old. I was born in Sarajevo and I really like it there.";
 
-function test_numbers() {
+    }
 
-    var number = 5;
-    assert number == 5;
+    function test_numbers() {
 
-    var number2 = 10;
-    assert number2 == 10;
+        var number = 5;
+        assert number == 5;
 
-    var number3 = 15;
-    assert number3 == 15;
+        var number2 = 10;
+        assert number2 == 10;
 
-    var number4 = 20;
-    assert number4 == 20;
+        var number3 = 15;
+        assert number3 == 15;
 
-    var number5 = 25;
-    assert number5 == 25;
+        var number4 = 20;
+        assert number4 == 20;
 
-    var sum = number + number2 + number3 + number4 + number5;
-    assert sum == 75;
+        var number5 = 25;
+        assert number5 == 25;
 
-    var average = sum / 5;
-    assert average == 15;
+        var sum = number + number2 + number3 + number4 + number5;
+        assert sum == 75;
 
-}
+        var average = sum / 5;
+        assert average == 15;
 
-function test_floats() {
+    }
 
-    var float = 3.14;
-    assert float == 3.14;
+    function test_floats() {
 
-    var float2 = 5.5;
-    assert float2 == 5.5;
+        var float = 3.14;
+        assert float == 3.14;
 
-    var float3 = 7.7;
-    assert float3 == 7.7;
+        var float2 = 5.5;
+        assert float2 == 5.5;
 
-    var float4 = 9.9;
-    assert float4 == 9.9;
+        var float3 = 7.7;
+        assert float3 == 7.7;
 
-    var float5 = 11.11;
-    assert float5 == 11.11;
+        var float4 = 9.9;
+        assert float4 == 9.9;
 
-    var floatSum = float + float2 + float3 + float4 + float5;
-    assert floatSum == 37.35;
+        var float5 = 11.11;
+        assert float5 == 11.11;
 
-    var floatAverage = floatSum / 5;
-    assert floatAverage == 7.47;
+        var floatSum = float + float2 + float3 + float4 + float5;
+        assert floatSum == 37.35;
 
-}
+        var floatAverage = floatSum / 5;
+        assert floatAverage == 7.47;
 
-function test_booleans() {
+    }
 
-    var boolean1 = true;
-    assert boolean1 == true;
+    function test_booleans() {
 
-    var boolean2 = false;
-    assert boolean2 == false;
+        var boolean1 = true;
+        assert boolean1 == true;
 
-    var boolean3 = true;
-    assert boolean3 == true;
+        var boolean2 = false;
+        assert boolean2 == false;
 
-    var boolean4 = false;
-    assert boolean4 == false;
+        var boolean3 = true;
+        assert boolean3 == true;
 
-    var boolean5 = true;
-    assert boolean5 == true;
+        var boolean4 = false;
+        assert boolean4 == false;
 
-    var booleanSum = boolean1 + boolean2 + boolean3 + boolean4 + boolean5;
-    assert booleanSum == false;
+        var boolean5 = true;
+        assert boolean5 == true;
 
-}
+        var booleanSum = boolean1 + boolean2 + boolean3 + boolean4 + boolean5;
+        assert booleanSum == false;
 
-function test_math() {
+    }
 
-    var math = 5 + 4 * 3;
-    assert math == 17;
+    function test_math() {
+
+        var math = 5 + 4 * 3;
+        assert math == 17;
+
+    }
 
 }

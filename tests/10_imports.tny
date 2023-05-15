@@ -1,1 +1,12 @@
-import tests\01_variables.tny;
+import "tests\10_imports_file1.tny";
+import "tests\10_imports_file2.tny";
+
+function main(argv) {
+
+    var man = new person();
+    man.speak("hello");
+
+    var rosie = new dog();
+    dog.bark();
+
+}

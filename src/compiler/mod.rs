@@ -1,13 +1,15 @@
 use std::collections::HashMap;
-use log::{debug, trace};
+use std::fs;
+use log::{debug, error, info, trace};
 
-use crate::compiler::frontend::Token;
 use crate::compiler::function::Function;
+use crate::compiler::token::Token;
 use crate::vm::program::Program;
 use crate::vm::value::Value;
 
-pub mod frontend;
+mod frontend;
 mod function;
+mod token;
 
 // Compiler
 pub struct Compiler {
@@ -24,7 +26,10 @@ impl Compiler {
         }
     }
 
-    pub fn compile(mut self, script: Vec<Token>) -> Result<Program, String> {
+    pub fn compile(mut self, program: String) -> Result<Program, String> {
+
+        // Tokenize Code
+        let script: Vec<Token> = frontend::parser::script(program.as_str()).map_err(|e| e.to_string())?;
 
         // loop through the imports of the script
         debug!("Importing");
@@ -32,7 +37,7 @@ impl Compiler {
             match token {
                 Token::Import(file) => {
                     debug!("Importing {}", file);
-                    // let imported_script = fs::read_to_string(file).expect("Unable to read file");
+                    let imported_script = fs::read_to_string(file).expect("Unable to read file");
                     // let script: Vec<Token> = frontend::parser::script(&imported_script).map_err(|e| e.to_string()).expect("err");
                 },
                 _ => {}
@@ -40,7 +45,7 @@ impl Compiler {
         }
 
         // now loop through the classes of the script
-        debug!("Compiling classes");
+        debug!("Precompiling");
         for token in script.as_slice() {
             match token {
                 Token::Class(class_name, items) => {
@@ -56,12 +61,11 @@ impl Compiler {
                             Token::Function(func_name, _params, _statements) => {
 
                                 // create a new name for the function
-                                let mut new_name = class_name.to_string();
-                                new_name.push_str("_");
-                                new_name.push_str(&func_name.to_string());
+                                let new_name = format!("{}.{}", class_name.to_string(), func_name);
 
                                 // insert into object the name of the function with the new name in a FunctionRef
-                                object.insert(func_name.to_string(), Value::FunctionRef(new_name));
+                                object.insert(func_name.to_string(), Value::FunctionRef(new_name.clone()));
+
                             },
 
                             // add the variable to the class
@@ -95,17 +99,16 @@ impl Compiler {
 
                             // add the function to the class
                             Token::Function(func_name, params, statements) => {
-                                let mut new_name = class_name.to_string();
-                                new_name.push_str("_");
-                                new_name.push_str(&func_name.to_string());
+
+                                let new_name = format!("{}.{}", class_name, func_name);
 
                                 // add the 'this' parameter to the function
                                 let mut new_params = params.to_vec();
                                 new_params.insert(0,Token::Identifier(String::from("this")));
-                                trace!("compiling function {} with parameters {:?}", new_name, new_params);
 
                                 // create a new function with the new name
-                                self.functions.push(Function::new(&new_name, new_params.as_slice(), statements.as_slice(), self.classes.clone()));
+                                let func = Function::new(&new_name, new_params.as_slice(), statements.as_slice(), self.classes.clone());
+                                self.functions.push(func);
                             },
                             _ => {}
                         }
@@ -116,16 +119,16 @@ impl Compiler {
                     // compile new function
                     debug!("compiling function {}", func_name);
                     trace!("{} parameters and {} statements", params.len(), items.len());
-                    let f = Function::new(func_name, params.as_slice(), items.as_slice(), self.classes.clone());
+                    let f = Function::new(func_name, params.as_slice(), items.as_slice(),self.classes.clone());
 
                     // compile anonymous functions
-                    for af in f.anonymous_functions.iter() {
+                    for af in f.get_anonymous_functions().iter() {
 
                         match af {
                             Token::Function(anon_name, params, statements) => {
                                 debug!("compiling anonymous function {}", anon_name);
                                 trace!("{} parameters and {} statements", params.len(), statements.len());
-                                self.functions.push(Function::new(&anon_name, params.as_slice(), statements.as_slice(), self.classes.clone()));
+                                self.functions.push(Function::new(&anon_name, params.as_slice(), statements.as_slice(),self.classes.clone()));
                             }
                             _ => unreachable!("anonymous function is not a function")
                         }
@@ -150,9 +153,13 @@ impl Compiler {
         for func in self.functions {
 
             // insert the function into the program
-            trace!("compiling function {} with {} instructions and {} vars", func.name, func.instructions.len(), func.variables.len());
-            p.functions.insert(func.name.clone(), p.instructions.len() as i32);
-            p.instructions.extend(func.instructions);
+            trace!("compiling function {} ", func.get_name());
+
+            // add the function to the program
+            p.functions.insert(func.get_name().clone(), p.instructions.len() as i32);
+
+            // add the instructions of the function to the program
+            p.instructions.extend(func.get_instructions().clone());
 
         }
 

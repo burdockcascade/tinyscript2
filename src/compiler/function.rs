@@ -1,17 +1,17 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 use log::{error, trace};
-use crate::compiler::frontend::Token;
+use crate::compiler::token::Token;
 use crate::vm::instruction::Instruction;
 use crate::vm::value::Value;
 
 // Function
 pub struct Function {
-    pub(crate) name: String,
-    pub(crate) instructions: Vec<Instruction>,
-    pub(crate) anonymous_functions: Vec<Token>,
-    pub(crate) variables: HashMap<String, i32>,
-    classes: HashMap<String, HashMap<String, Value>>,
+    name: String,
+    instructions: Vec<Instruction>,
+    anonymous_functions: Vec<Token>,
+    variables: HashMap<String, i32>,
+    classes: HashMap<String, HashMap<String, Value>>
 }
 
 
@@ -19,13 +19,15 @@ impl Function {
 
     pub fn new(name: &String, params: &[Token], statements: &[Token], classes: HashMap<String, HashMap<String, Value>>) -> Self {
 
+        trace!("compiling function '{}' with parameters {:?}", name, params);
+
         // create a new function
         let mut f = Function {
             name: name.to_string(),
             instructions: vec![],
             anonymous_functions: vec![],
             variables: HashMap::default(),
-            classes: classes,
+            classes,
         };
 
         // store the parameters as variables
@@ -44,6 +46,21 @@ impl Function {
 
         return f;
 
+    }
+
+    // get name
+    pub fn get_name(&self) -> &String {
+        return &self.name;
+    }
+
+    // get anonymous functions
+    pub fn get_anonymous_functions(&self) -> &Vec<Token> {
+        return &self.anonymous_functions;
+    }
+
+    // get instructions
+    pub fn get_instructions(&self) -> &Vec<Instruction> {
+        return &self.instructions;
     }
 
     // compile a list of statements

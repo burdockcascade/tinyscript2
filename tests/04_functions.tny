@@ -16,26 +16,31 @@ function execute(fn) {
     fn(true);
 }
 
-function loopy(b) {
-    var b_count = 0;
+class loops {
 
-    for (item in b) {
-        assert item <= 9;
-        assert item >= 1;
-        b_count = b_count + 1;
+    function loopy(b) {
+        var b_count = 0;
+
+        for (item in b) {
+            assert item <= 9;
+            assert item >= 1;
+            b_count = b_count + 1;
+        }
+
+        return b_count;
     }
 
-    return b_count;
-}
+    function do_loopy(val) {
+        return this.loopy(val);
+    }
 
-function do_loopy(val) {
-    return loopy(val);
 }
 
 
 function main() {
 
-    var count = do_loopy([1,2,4,5,7,8,9]);
+    var lp = new loops();
+    var count = lp.do_loopy([1,2,4,5,7,8,9]);
     assert count == 7;
 
     func1(true, false);
