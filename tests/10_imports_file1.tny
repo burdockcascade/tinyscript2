@@ -1,7 +1,0 @@
-class person {
-
-    function speak(msg) {
-        print msg;
-    }
-
-}

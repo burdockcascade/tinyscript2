@@ -9,22 +9,33 @@ pub enum Instruction {
     Print,
 
     // Stack
-    Push(Value),
-    StoreLocalVariable(i32),
-    LoadLocalVariable(i32),
-    LoadGlobal(i32),
-    CreateObject,
+    StackPush(Value),
     StackPop(i32),
 
-    // Arrays & Dictionaries
-    LoadIndexedValue,
+    // Variables
+    StoreLocalVariable(i32),
+    CopyToLocalVariable(i32),
+    LoadLocalVariable(i32),
+
+    // Global
+    StoreGlobal(i32),
+    LoadGlobal(i32),
+
+    // Objects
+    CreateObject,
     LoadObjectMember(String),
-    ArrayLength,
-    ArrayAdd,
+    SetObjectMember(String),
+
+    // Dictionaries
+    LoadIndexedValue,
     DictionaryAdd,
 
+    // Arrays
+    ArrayLength,
+    ArrayAdd,
+
     // Instructions
-    Call(i32),
+    Call(usize),
     Jump(i32),
     JumpIfTrue(i32),
     JumpIfFalse(i32),

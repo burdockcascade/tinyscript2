@@ -1,5 +1,0 @@
-function main(argv) {
-    var msg = "hello world";
-    print msg;
-    assert msg == "hello world";
-}

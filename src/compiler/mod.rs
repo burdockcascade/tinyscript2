@@ -80,11 +80,12 @@ impl Compiler {
                         }
                     }
 
-                    // insert the class into the globals
-                    self.update_global(class_name.to_string(), Value::Class(object));
-
                     // log class name and object
                     trace!("storing class {:?} with object '{:?}'", class_name.to_string(), object);
+
+                    // insert the class into the globals
+                    let global_index = p.insert_global(Value::Class(object));
+                    self.global_lookup.insert(class_name.to_string(), global_index);
 
                 },
                 _ => {}
@@ -166,11 +167,6 @@ impl Compiler {
 
         // return the program
         Ok(p)
-    }
-
-    fn update_global(&mut self, name: String, value: Value) {
-        let global_index = p.insert_global(value);
-        self.global_lookup.insert(name.to_string(), global_index);
     }
 
 }

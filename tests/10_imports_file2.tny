@@ -1,7 +1,0 @@
-class dog {
-
-    function bark() {
-        print "bark";
-    }
-
-}

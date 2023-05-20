@@ -73,10 +73,22 @@ impl Frame {
         self.push_value_to_variable_slot(slot, value);
     }
 
+    // copy value from the stack to a variable slot
+    pub fn copy_from_stack_to_variable_slot(&mut self, slot: usize) {
+        let value = self.get_top_value_on_stack();
+        self.push_value_to_variable_slot(slot, value);
+    }
+
     // copy from variable slot to stack
     pub fn copy_from_variable_slot_to_stack(&mut self, slot: usize) {
         let value = self.get_variable_or_panic(slot).clone();
         self.push_value_to_stack(value);
+    }
+
+    // return a clone of the top value on the stack
+    pub fn get_top_value_on_stack(&self) -> Value {
+        let value = self.data.last().expect("stack should have a value");
+        return value.clone();
     }
 
     // pop a value from the stack

@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt;
@@ -18,18 +19,13 @@ pub enum Value {
     Array(Vec<Value>),
     Dictionary(HashMap<String, Value>),
     Class(HashMap<String, Value>),
-    Object(Rc<HashMap<String, Value>>),
-
-    // Return
-    ReturnPosition(i32),
-    ReturnFrame(i32),
-
-    IndexPath(Vec<Value>),
+    Object(Rc<RefCell<HashMap<String, Value>>>),
     FunctionRef(String)
 }
 
 // function for finding Value by parameter. if its a number then return integer, if its a string then return string, etc.
 impl Value {
+
     pub fn parse(param: &str) -> Value {
         match param.parse::<i32>() {
             Ok(num) => Value::Integer(num),
@@ -40,6 +36,14 @@ impl Value {
                     Err(_) => Value::String(param.to_string())
                 }
             }
+        }
+    }
+
+    // wrap the value in a Rc<RefCell<Value>> so that it can be mutated
+    pub fn wrap_with_ref(self) -> Value {
+        match self {
+            Value::Class(v) => Value::Object(Rc::new(RefCell::new(v))),
+            _ => unimplemented!("todo for {:?}", self),
         }
     }
 }

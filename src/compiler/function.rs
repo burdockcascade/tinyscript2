@@ -122,7 +122,7 @@ impl Function {
 
                     // call the function
                     trace!("calling function with {} args", args.len());
-                    self.instructions.push(Instruction::Call((args.len() as i32) + 1));
+                    self.instructions.push(Instruction::Call(args.len() + 1));
 
                 },
                 _ => unreachable!("chain item is not a variable or index")
@@ -267,7 +267,7 @@ impl Function {
         self.instructions.push(Instruction::StoreLocalVariable(arraylen));
 
         // Store index in tmp variable
-        self.instructions.push(Instruction::Push(Value::Integer(0)));
+        self.instructions.push(Instruction::StackPush(Value::Integer(0)));
         self.instructions.push(Instruction::StoreLocalVariable(array_idx));
 
         // Start of loop
@@ -284,7 +284,7 @@ impl Function {
 
         // Increment index
         self.instructions.push(Instruction::LoadLocalVariable(array_idx));
-        self.instructions.push(Instruction::Push(Value::Integer(1)));
+        self.instructions.push(Instruction::StackPush(Value::Integer(1)));
         self.instructions.push(Instruction::Add);
         self.instructions.push(Instruction::StoreLocalVariable(array_idx));
 
@@ -360,32 +360,32 @@ impl Function {
                 self.anonymous_functions.push(Token::Function(func_name.clone(), params.clone(), statements.clone()));
 
                 // Push ref to function
-                self.instructions.push(Instruction::Push(Value::FunctionRef(func_name)));
+                self.instructions.push(Instruction::StackPush(Value::FunctionRef(func_name)));
             }
 
             Token::Null => {
                 trace!("pushing {:?} onto stack", token);
-                self.instructions.push(Instruction::Push(Value::Null));
+                self.instructions.push(Instruction::StackPush(Value::Null));
             }
 
             Token::Integer(v) => {
                 trace!("pushing {:?} onto stack", token);
-                self.instructions.push(Instruction::Push(Value::Integer(*v)));
+                self.instructions.push(Instruction::StackPush(Value::Integer(*v)));
             }
 
             Token::Float(v) => {
                 trace!("pushing {:?} onto stack", token);
-                self.instructions.push(Instruction::Push(Value::Float(*v)));
+                self.instructions.push(Instruction::StackPush(Value::Float(*v)));
             }
 
             Token::Bool(v) => {
                 trace!("pushing {:?} onto stack", token);
-                self.instructions.push(Instruction::Push(Value::Bool(*v)));
+                self.instructions.push(Instruction::StackPush(Value::Bool(*v)));
             }
 
             Token::String(v) => {
                 trace!("pushing {:?} onto stack", token);
-                self.instructions.push(Instruction::Push(Value::String(v.to_string())));
+                self.instructions.push(Instruction::StackPush(Value::String(v.to_string())));
             }
 
             Token::Identifier(id) => {
@@ -397,7 +397,7 @@ impl Function {
             Token::Array(elements) => {
 
                 // Create empty array
-                self.instructions.push(Instruction::Push(Value::Array(vec![])));
+                self.instructions.push(Instruction::StackPush(Value::Array(vec![])));
 
                 for element in elements {
                     self.compile_expression(element);
@@ -409,11 +409,11 @@ impl Function {
             Token::Dictionary(pairs) => {
 
                 // Create empty array
-                self.instructions.push(Instruction::Push(Value::Dictionary(HashMap::default())));
+                self.instructions.push(Instruction::StackPush(Value::Dictionary(HashMap::default())));
 
                 for pair in pairs {
                     if let Token::KeyValuePair(k, value) = pair {
-                        self.instructions.push(Instruction::Push(Value::String(k.to_string())));
+                        self.instructions.push(Instruction::StackPush(Value::String(k.to_string())));
                         self.compile_expression(value);
                         self.instructions.push(Instruction::DictionaryAdd);
                     }
@@ -534,7 +534,7 @@ impl Function {
             let index = self.get_or_create_variable_index(name.to_string());
             self.instructions.push(Instruction::LoadLocalVariable(index))
         } else {
-            self.instructions.push(Instruction::Push(Value::FunctionRef(name.to_string())))
+            self.instructions.push(Instruction::StackPush(Value::FunctionRef(name.to_string())))
         }
 
         // compile the arguments
@@ -542,7 +542,7 @@ impl Function {
             self.compile_expression(arg);
         }
 
-        self.instructions.push(Instruction::Call(arg_len as i32));
+        self.instructions.push(Instruction::Call(arg_len));
     }
 
     // compile a return statement

@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -147,7 +148,7 @@ impl VM {
                     let class = frame.pop_value_from_stack();
                     match class {
                         Value::Class(class) => {
-                            frame.push_value_to_stack(Value::Object(Rc::new(class.clone())));
+                            frame.push_value_to_stack(Value::Object(Rc::new(RefCell::new(class.clone()))));
                         },
                         _ => unreachable!("{} is not a class", class)
                     }
@@ -159,7 +160,8 @@ impl VM {
                     let object = frame.pop_value_from_stack();
                     match object {
                         Value::Object(obj) => {
-                            let value = obj.get(member).expect(&*format!("member '{}' not found in object", member));
+                            let o = obj.borrow_mut();
+                            let value = o.get(member).expect(&*format!("member '{}' should exist in object", member));
                             trace!("pushing value '{}' onto stack", value);
                             frame.push_value_to_stack(value.clone());
                         },
@@ -188,7 +190,7 @@ impl VM {
                 }
 
                 // Push value onto stack
-                Instruction::Push(variant) => {
+                Instruction::StackPush(variant) => {
                     frame.push_value_to_stack(variant.clone());
                     self.ip += 1
                 }
@@ -196,6 +198,11 @@ impl VM {
                 // get value from stack and store in variable
                 Instruction::StoreLocalVariable(index) => {
                     frame.move_from_stack_to_variable_slot(*index as usize);
+                    self.ip += 1;
+                }
+
+                Instruction::CopyToLocalVariable(index) => {
+                    frame.copy_from_stack_to_variable_slot(*index as usize);
                     self.ip += 1;
                 }
 
@@ -260,6 +267,22 @@ impl VM {
 
                     self.ip += 1;
 
+                }
+
+                Instruction::SetObjectMember(member) => {
+                    let object = frame.pop_value_from_stack();
+                    let value = frame.pop_value_from_stack();
+
+                    if let Value::Object(v) = object {
+
+                        let mut o = v.borrow_mut();
+
+                        o.insert(member.to_string(), value);
+                        frame.push_value_to_stack(Value::Object(Rc::new(RefCell::new(o.clone()))));
+
+                    }
+
+                    self.ip += 1;
                 }
 
                 Instruction::DictionaryAdd => {
@@ -359,8 +382,6 @@ impl VM {
                 debug!("end of script");
                 break;
             }
-
-            frame.print_stack_and_variables();
 
         }
 
