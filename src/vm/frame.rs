@@ -4,17 +4,23 @@ use crate::vm::value::Value;
 #[derive(Clone, PartialEq, Debug)]
 pub struct Frame {
     name: String,
-    return_position: i32,
+    return_position: Option<usize>,
     variables: Vec<Value>,
     data: Vec<Value>,
+}
+
+impl ToString for Frame {
+    fn to_string(&self) -> String {
+        format!("Frame: {}", self.name)
+    }
 }
 
 impl Frame {
 
     // new frame with parameter as name
-    pub fn new(name: String, return_position: i32, args: Vec<Value>) -> Frame {
+    pub fn new(name: String, return_position: Option<usize>, args: Vec<Value>) -> Frame {
 
-        trace!("new frame {} with return position {}", name, return_position);
+        trace!("new frame {} with return position {:?}", name, return_position);
 
         Frame {
             name,
@@ -30,14 +36,14 @@ impl Frame {
     }
 
     // get return position
-    pub fn get_return_position(&self) -> i32 {
+    pub fn get_return_position(&self) -> Option<usize> {
         self.return_position
     }
 
     // print debug info if debug is enabled
     pub fn print_debug_info(&self) {
         debug!("frame: {}", self.name);
-        debug!("return position: {}", self.return_position);
+        debug!("return position: {:?}", self.return_position);
         self.print_stack_and_variables();
     }
 
@@ -117,8 +123,8 @@ impl Frame {
 
     // get the value from the variable slot
     pub fn get_variable_or_panic(&self, slot: usize) -> &Value {
-        let value = self.variables.get(slot).expect("value in variable slot");
-        trace!("get value {:?} from variable slot {}", value, slot);
+        trace!("get value from variable slot {}", slot);
+        let value = self.variables.get(slot).expect("variable slot should exist");
         return value;
     }
 
@@ -132,19 +138,19 @@ mod tests {
 
     #[test]
     fn test_get_name() {
-        let frame = Frame::new("test".to_string(), 0, vec![]);
+        let frame = Frame::new("test".to_string(), None, vec![]);
         assert_eq!(frame.get_name(), "test");
     }
 
     #[test]
     fn test_get_return_position() {
-        let frame = Frame::new("test".to_string(), 7, vec![]);
-        assert_eq!(frame.get_return_position(), 7);
+        let frame = Frame::new("test".to_string(), Some(7), vec![]);
+        assert_eq!(frame.get_return_position(), Some(7));
     }
 
     #[test]
     fn test_push_value_to_stack() {
-        let mut frame = Frame::new("test".to_string(), 0, vec![]);
+        let mut frame = Frame::new("test".to_string(), None, vec![]);
         frame.push_value_to_stack(Value::Float(1.0));
         assert_eq!(frame.data.len(), 1);
         assert_eq!(frame.data[0], Value::Float(1.0));
@@ -152,7 +158,7 @@ mod tests {
 
     #[test]
     fn test_push_value_to_variable_slot() {
-        let mut frame = Frame::new("test".to_string(), 0, vec![]);
+        let mut frame = Frame::new("test".to_string(), None, vec![]);
         frame.push_value_to_variable_slot(0, Value::Float(1.0));
         assert_eq!(frame.variables.len(), 1);
         assert_eq!(frame.variables[0], Value::Float(1.0));
@@ -160,7 +166,7 @@ mod tests {
 
     #[test]
     fn test_move_from_stack_to_variable_slot() {
-        let mut frame = Frame::new("test".to_string(), 0, vec![]);
+        let mut frame = Frame::new("test".to_string(), None, vec![]);
         frame.push_value_to_stack(Value::Float(1.0));
         frame.move_from_stack_to_variable_slot(0);
         assert_eq!(frame.variables.len(), 1);
@@ -169,7 +175,7 @@ mod tests {
 
     #[test]
     fn test_copy_from_variable_slot_to_stack() {
-        let mut frame = Frame::new("test".to_string(), 0, vec![]);
+        let mut frame = Frame::new("test".to_string(), None, vec![]);
         frame.push_value_to_variable_slot(0, Value::Float(1.0));
         frame.copy_from_variable_slot_to_stack(0);
         assert_eq!(frame.data.len(), 1);
@@ -178,21 +184,21 @@ mod tests {
 
     #[test]
     fn test_get_variable_or_panic() {
-        let mut frame = Frame::new("test".to_string(), 0, vec![]);
+        let mut frame = Frame::new("test".to_string(), None, vec![]);
         frame.push_value_to_variable_slot(0, Value::Float(1.0));
         assert_eq!(frame.get_variable_or_panic(0), &Value::Float(1.0));
     }
 
     #[test]
     fn test_pop_value_from_stack() {
-        let mut frame = Frame::new("test".to_string(), 0, vec![]);
+        let mut frame = Frame::new("test".to_string(), None, vec![]);
         frame.push_value_to_stack(Value::Float(1.0));
         assert_eq!(frame.pop_value_from_stack(), Value::Float(1.0));
     }
 
     #[test]
     fn test_get_2_values_from_stack() {
-        let mut frame = Frame::new("test".to_string(), 0, vec![]);
+        let mut frame = Frame::new("test".to_string(), None, vec![]);
         frame.push_value_to_stack(Value::Float(1.0));
         frame.push_value_to_stack(Value::Float(2.0));
         let (lhs, rhs) = frame.pop_2_values_from_stack();

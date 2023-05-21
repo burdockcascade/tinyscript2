@@ -14,7 +14,7 @@ mod token;
 // Compiler
 pub struct Compiler {
     functions: Vec<Function>,
-    global_lookup: HashMap<String, i32>,
+    global_lookup: HashMap<String, usize>,
 }
 
 impl Compiler {
@@ -36,7 +36,7 @@ impl Compiler {
 
         // loop through the imports of the script
         debug!("Importing");
-        for token in script.as_slice() {
+        for token in script.iter() {
             match token {
                 Token::Import(file) => {
                     debug!("Importing {}", file);
@@ -48,10 +48,12 @@ impl Compiler {
         }
 
         // now loop through the classes of the script
-        debug!("Precompiling");
-        for token in script.as_slice() {
+        debug!("Compiling high level items");
+        for token in script.iter() {
             match token {
                 Token::Class(class_name, items) => {
+
+                    let mut has_constructor = false;
 
                     // create a new object for the class
                     let mut object = HashMap::new();
@@ -62,6 +64,11 @@ impl Compiler {
 
                             // add the function to the class
                             Token::Function(func_name, _params, _statements) => {
+
+                                if func_name == "constructor" {
+                                    // if the class has a constructor, set the flag
+                                    has_constructor = true;
+                                }
 
                                 // create a new name for the function
                                 let new_name = format!("{}.{}", class_name.to_string(), func_name);
@@ -80,6 +87,15 @@ impl Compiler {
                         }
                     }
 
+                    // add the constructor if it doesn't exist
+                    if !has_constructor {
+                        // create a new name for the function
+                        let new_name = format!("{}.{}", class_name.to_string(), "constructor");
+
+                        // insert into object the name of the function with the new name in a FunctionRef
+                        object.insert("constructor".to_string(), Value::FunctionRef(new_name.clone()));
+                    }
+
                     // log class name and object
                     trace!("storing class {:?} with object '{:?}'", class_name.to_string(), object);
 
@@ -94,7 +110,7 @@ impl Compiler {
 
         // now loop through the functions of the script
         debug!("Compiling functions");
-        for token in script.as_slice() {
+        for token in script.iter() {
             match token {
                 Token::Class(class_name, items) => {
 
@@ -111,37 +127,37 @@ impl Compiler {
                                 new_params.insert(0,Token::Identifier(String::from("this")));
 
                                 // create a new function with the new name
-                                let func = Function::new(&new_name, new_params.as_slice(), statements.as_slice(), self.global_lookup.clone());
+                                let func = Function::new(class_name.as_str(), &new_name, new_params.as_slice(), statements.as_slice(), self.global_lookup.clone());
                                 self.functions.push(func);
                             },
                             _ => {}
                         }
                     }
                 }
-                Token::Function(func_name, params, items) => {
-
-                    // compile new function
-                    debug!("compiling function {}", func_name);
-                    trace!("{} parameters and {} statements", params.len(), items.len());
-                    let f = Function::new(func_name, params.as_slice(), items.as_slice(),self.global_lookup.clone());
-
-                    // compile anonymous functions
-                    for af in f.get_anonymous_functions().iter() {
-
-                        match af {
-                            Token::Function(anon_name, params, statements) => {
-                                debug!("compiling anonymous function {}", anon_name);
-                                trace!("{} parameters and {} statements", params.len(), statements.len());
-                                self.functions.push(Function::new(&anon_name, params.as_slice(), statements.as_slice(),self.global_lookup.clone()));
-                            }
-                            _ => unreachable!("anonymous function is not a function")
-                        }
-                    }
-
-                    // push the function to the functions vector
-                    self.functions.push(f);
-
-                },
+                // Token::Function(func_name, params, items) => {
+                //
+                //     // compile new function
+                //     debug!("compiling function {}", func_name);
+                //     trace!("{} parameters and {} statements", params.len(), items.len());
+                //     let f = Function::new(func_name, params.as_slice(), items.as_slice(),self.global_lookup.clone());
+                //
+                //     // compile anonymous functions
+                //     for af in f.get_anonymous_functions().iter() {
+                //
+                //         match af {
+                //             Token::Function(anon_name, params, statements) => {
+                //                 debug!("compiling anonymous function {}", anon_name);
+                //                 trace!("{} parameters and {} statements", params.len(), statements.len());
+                //                 self.functions.push(Function::new(&anon_name, params.as_slice(), statements.as_slice(),self.global_lookup.clone()));
+                //             }
+                //             _ => unreachable!("anonymous function is not a function")
+                //         }
+                //     }
+                //
+                //     // push the function to the functions vector
+                //     self.functions.push(f);
+                //
+                // },
                 _ => {}
             }
         }
@@ -154,7 +170,7 @@ impl Compiler {
             trace!("compiling function {} ", func.get_name());
 
             // add the function to the program
-            p.symbols.insert(func.get_name().clone(), p.instructions.len() as i32);
+            p.symbols.insert(func.get_name().clone(), p.instructions.len());
 
             // add the instructions of the function to the program
             p.instructions.extend(func.get_instructions().clone());

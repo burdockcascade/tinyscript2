@@ -18,7 +18,7 @@ pub fn compile(program: &str) -> Result<Program, String> {
 
 }
 
-pub fn compile_and_run(program: &str, entry: String, params: Value) -> Result<Value, String> {
+pub fn compile_and_run(program: &str, main: &str, params: Value) -> Result<Value, String> {
     
     // Compile to bytecode
     let bytecode = compile(program).expect("program error");
@@ -27,7 +27,7 @@ pub fn compile_and_run(program: &str, entry: String, params: Value) -> Result<Va
     let vm: VM = VM::new(bytecode);
 
     // Execute
-    vm.exec(entry, params).map_err(|e| e.to_string())
+    vm.exec(main, params).map_err(|e| e.to_string())
 
 }
 

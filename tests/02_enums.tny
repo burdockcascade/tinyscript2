@@ -1,0 +1,12 @@
+enum color {
+    red,
+    green,
+    blue
+}
+
+class Main {
+    function main() {
+        var c = color.red;
+        trace(c);
+    }
+}

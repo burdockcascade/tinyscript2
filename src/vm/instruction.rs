@@ -13,13 +13,13 @@ pub enum Instruction {
     StackPop(i32),
 
     // Variables
-    StoreLocalVariable(i32),
-    CopyToLocalVariable(i32),
-    LoadLocalVariable(i32),
+    MoveToLocalVariable(usize),
+    CopyToLocalVariable(usize),
+    LoadLocalVariable(usize),
 
     // Global
-    StoreGlobal(i32),
-    LoadGlobal(i32),
+    StoreGlobal(usize),
+    LoadGlobal(usize),
 
     // Objects
     CreateObject,

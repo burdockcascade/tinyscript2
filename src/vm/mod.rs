@@ -17,10 +17,10 @@ mod frame;
 // Virtual Machine
 pub struct VM {
     instructions: Vec<Instruction>,
-    functions: HashMap<String, i32>,
+    functions: HashMap<String, usize>,
     frames: Vec<Frame>,
     globals: Vec<Value>,
-    ip: i32,
+    ip: usize,
 }
 
 impl VM {
@@ -35,25 +35,25 @@ impl VM {
         }
     }
 
-    pub fn exec(mut self, entry: String, parameters: Value) -> Result<Value, String> {
+    pub fn exec(mut self, entry: &str, parameters: Value) -> Result<Value, String> {
 
         info!("Executing program");
         debug!("program started with {} instructions", self.instructions.len());
 
-        if self.functions.contains_key(entry.as_str()) {
-            self.ip = *self.functions.get(entry.as_str()).expect("no entry found");
+        if self.functions.contains_key(entry) {
+            self.ip = *self.functions.get(entry).expect("no entry found");
         }
 
         trace!("{:?}", self.instructions);
 
         // do not run if no instructions
         if self.instructions.len() == 0 {
-            debug!("no instructions to run");
+            error!("no instructions to run");
             return Ok(Value::Null);
         }
 
         // push new frame
-        self.frames.push(Frame::new(String::from("main"), -1, vec![parameters]));
+        self.frames.push(Frame::new(String::from("main"), None, vec![parameters]));
 
         // set current frame
         let mut frame = self.frames.last_mut().expect("frame should be on the stack");
@@ -61,7 +61,7 @@ impl VM {
         // run instructions
         loop {
 
-            let instruction = self.instructions.get(self.ip as usize).expect(&*format!("instruction #{} not found", self.ip));
+            let instruction = self.instructions.get(self.ip as usize).expect(&*format!("instruction #{} should exist", self.ip));
 
             debug!("");
             debug!( "== loop [frame {}; ip:{} ({:?})]", frame.get_name(), self.ip, instruction);
@@ -96,14 +96,14 @@ impl VM {
 
                     // pop functionref from stack
                     let name = frame.pop_value_from_stack().to_string();
-                    let function_position = *self.functions.get(name.as_str()).expect("function not found");
+                    let function_position = *self.functions.get(name.as_str()).expect("function should exist");
 
                     // frame name with fp
                     let function_name = format!("{}[{}]", name, self.frames.len());
 
                     // push new frame onto frames
                     let next_ip = self.ip + 1;
-                    self.frames.push(Frame::new(function_name, next_ip, args));
+                    self.frames.push(Frame::new(function_name, Some(next_ip), args));
 
                     // set current frame
                     frame = self.frames.last_mut().expect("frame should be on the stack");
@@ -121,14 +121,14 @@ impl VM {
                         Value::Null
                     };
 
-                    if frame.get_return_position() == -1 {
+                    if frame.get_return_position() == None {
                         trace!("returning {} from {}", return_value, frame.get_name());
                         return Ok(return_value);
                     }
 
                     // set instruction back to previous location
-                    trace!("ip jumping from {} to {}", self.ip, frame.get_return_position());
-                    self.ip = frame.get_return_position();
+                    trace!("ip jumping from {} to {:?}", self.ip, frame.get_return_position());
+                    self.ip = frame.get_return_position().expect("return position should be set");
 
                     // remove last frame
                     self.frames.pop();
@@ -174,19 +174,45 @@ impl VM {
 
                 Instruction::Jump(delta) => {
                     trace!("moving instruction pointer by {}", delta);
-                    self.ip += delta;
+
+                    if *delta > 0 {
+                        self.ip += *delta as usize;
+                    } else {
+                        self.ip -= *delta as usize;
+                    }
                 }
 
                 Instruction::JumpIfTrue(delta) => {
                     let b = frame.pop_value_from_stack();
                     trace!("jumping if {} is true", b);
-                    self.ip += if b == Value::Bool(true) { *delta } else { 1 };
+
+                    match b {
+                        Value::Bool(true) =>{
+                            if *delta > 0 {
+                                self.ip += *delta as usize;
+                            } else {
+                                self.ip -= *delta as usize;
+                            }
+                        },
+                        _ => self.ip += 1
+                    }
+
                 }
 
                 Instruction::JumpIfFalse(delta) => {
                     let b = frame.pop_value_from_stack();
                     trace!("jumping if {} is false", b);
-                    self.ip += if b == Value::Bool(false) { *delta } else { 1 };
+
+                    match b {
+                        Value::Bool(false) =>{
+                            if *delta > 0 {
+                                self.ip += *delta as usize;
+                            } else {
+                                self.ip -= *delta as usize;
+                            }
+                        },
+                        _ => self.ip += 1
+                    }
                 }
 
                 // Push value onto stack
@@ -196,7 +222,7 @@ impl VM {
                 }
 
                 // get value from stack and store in variable
-                Instruction::StoreLocalVariable(index) => {
+                Instruction::MoveToLocalVariable(index) => {
                     frame.move_from_stack_to_variable_slot(*index as usize);
                     self.ip += 1;
                 }
@@ -378,7 +404,7 @@ impl VM {
 
             }
 
-            if self.ip == self.instructions.len() as i32 {
+            if self.ip == self.instructions.len() {
                 debug!("end of script");
                 break;
             }

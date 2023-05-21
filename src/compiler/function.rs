@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::rc::Rc;
-use log::{error, trace};
+use log::{debug, error, trace};
 use crate::compiler::token::Token;
 use crate::vm::instruction::Instruction;
 use crate::vm::value::Value;
@@ -8,22 +8,24 @@ use crate::vm::value::Value;
 // Function
 pub struct Function {
     name: String,
+    class_name: String,
     instructions: Vec<Instruction>,
     anonymous_functions: Vec<Token>,
-    variables: HashMap<String, i32>,
-    global_lookup: HashMap<String, i32>,
+    variables: HashMap<String, usize>,
+    global_lookup: HashMap<String, usize>,
 }
 
 
 impl Function {
 
-    pub fn new(name: &String, params: &[Token], statements: &[Token], global_lookup: HashMap<String, i32>) -> Self {
+    pub fn new(class_name: &str, func_name: &str, params: &[Token], statements: &[Token], global_lookup: HashMap<String, usize>) -> Self {
 
-        trace!("compiling function '{}' with parameters {:?}", name, params);
+        trace!("compiling function '{}' in '{}' with parameters {:?}", func_name, class_name, params);
 
         // create a new function
         let mut f = Function {
-            name: name.to_string(),
+            name: func_name.to_string(),
+            class_name: class_name.to_string(),
             instructions: vec![],
             anonymous_functions: vec![],
             variables: HashMap::default(),
@@ -187,7 +189,7 @@ impl Function {
 
         // store value in variable
         trace!("storing value in variable {}", name.to_string());
-        self.instructions.push(Instruction::StoreLocalVariable(index));
+        self.instructions.push(Instruction::MoveToLocalVariable(index));
     }
 
     // compile for loop
@@ -264,11 +266,11 @@ impl Function {
         // Get array length
         self.instructions.push(Instruction::LoadLocalVariable(array));
         self.instructions.push(Instruction::ArrayLength);
-        self.instructions.push(Instruction::StoreLocalVariable(arraylen));
+        self.instructions.push(Instruction::MoveToLocalVariable(arraylen));
 
         // Store index in tmp variable
         self.instructions.push(Instruction::StackPush(Value::Integer(0)));
-        self.instructions.push(Instruction::StoreLocalVariable(array_idx));
+        self.instructions.push(Instruction::MoveToLocalVariable(array_idx));
 
         // Start of loop
         let start_ins_ptr = self.instructions.len();
@@ -277,7 +279,7 @@ impl Function {
         self.instructions.push(Instruction::LoadLocalVariable(array));
         self.instructions.push(Instruction::LoadLocalVariable(array_idx));
         self.instructions.push(Instruction::LoadIndexedValue);
-        self.instructions.push(Instruction::StoreLocalVariable(item));
+        self.instructions.push(Instruction::MoveToLocalVariable(item));
 
         // Compile statements inside loop block
         self.compile_statements(block);
@@ -286,7 +288,7 @@ impl Function {
         self.instructions.push(Instruction::LoadLocalVariable(array_idx));
         self.instructions.push(Instruction::StackPush(Value::Integer(1)));
         self.instructions.push(Instruction::Add);
-        self.instructions.push(Instruction::StoreLocalVariable(array_idx));
+        self.instructions.push(Instruction::MoveToLocalVariable(array_idx));
 
         // Jump if not equal
         self.instructions.push(Instruction::LoadLocalVariable(arraylen));
@@ -344,6 +346,22 @@ impl Function {
 
         // create object
         self.instructions.push(Instruction::CreateObject);
+
+        // store object in temp variable
+        let obj_var = self.create_temp_variable();
+        self.instructions.push(Instruction::CopyToLocalVariable(obj_var));
+
+        // load constructor functionref
+        self.instructions.push(Instruction::LoadObjectMember(String::from("constructor")));
+
+        // load object
+        self.instructions.push(Instruction::LoadLocalVariable(obj_var));
+
+        // call constructor
+        self.instructions.push(Instruction::Call(params.len() + 1));
+
+        // load object for assignment
+        self.instructions.push(Instruction::LoadLocalVariable(obj_var));
 
     }
 
@@ -525,7 +543,7 @@ impl Function {
 
     // compile a function call
     fn compile_call(&mut self, name: &Box<Token>, args: &Vec<Token>) {
-        let arg_len = args.len();
+        let mut arg_len = args.len();
 
         trace!("call to function '{:?}' with {} args", name.to_string(), arg_len);
 
@@ -534,7 +552,10 @@ impl Function {
             let index = self.get_or_create_variable_index(name.to_string());
             self.instructions.push(Instruction::LoadLocalVariable(index))
         } else {
-            self.instructions.push(Instruction::StackPush(Value::FunctionRef(name.to_string())))
+            let func_name = format!("{}.{}", self.class_name, name.to_string());
+            self.instructions.push(Instruction::StackPush(Value::FunctionRef(func_name)));
+            self.instructions.push(Instruction::LoadLocalVariable(0));
+            arg_len += 1;
         }
 
         // compile the arguments
@@ -552,13 +573,13 @@ impl Function {
     }
 
     // create a new temporary variable
-    fn create_temp_variable(&mut self) -> i32 {
+    fn create_temp_variable(&mut self) -> usize {
         self.get_or_create_variable_index(format!("var{}", self.variables.len()))
     }
 
     // get the index of a variable or create it if it doesn't exist
-    fn get_or_create_variable_index(&mut self, name: String) -> i32 {
-        let vlen = self.variables.len() as i32;
+    fn get_or_create_variable_index(&mut self, name: String) -> usize {
+        let vlen = self.variables.len();
         *self.variables.entry(name).or_insert(vlen)
     }
 

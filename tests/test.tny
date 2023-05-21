@@ -1,4 +1,4 @@
-class test {
+class main {
 
     function i_do_nothing() {
         assert false;
@@ -15,10 +15,14 @@ class test {
     function main(argv) {
         print("hello world");
 
-        var man = new person();
-        man.greet();
+        assert main.i_return_what_you_give_me(true);
 
-        test_fib();
+        var vars = new variables();
+        vars.test_strings();
+        vars.test_numbers();
+        vars.test_floats();
+        vars.test_booleans();
+        vars.test_math();
 
     }
 
@@ -228,11 +232,11 @@ class person {
     }
 
     function greet() {
-        print "hello, my name is " + this.name + " and I am " + this.age + " years old.";
+        print("hello, my name is " + this.name + " and I am " + this.age + " years old.");
     }
 
     function speak(msg) {
-        print msg;
+        print(msg);
     }
 }
 

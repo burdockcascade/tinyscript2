@@ -1,0 +1,6 @@
+class HelloWorld {
+    function main() {
+        var hw = "Hello World";
+        assert hw == "Hello World";
+    }
+}

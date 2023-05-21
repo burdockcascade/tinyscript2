@@ -1,4 +1,3 @@
-
 #[derive(Debug, Clone)]
 pub enum Token {
 
@@ -8,6 +7,7 @@ pub enum Token {
     Print(Box<Token>),
 
     Function(String, Vec<Token>, Vec<Token>),
+    
     AnonFunction(Vec<Token>, Vec<Token>),
     Class(String, Vec<Token>),
     Chain(Box<Token>, Vec<Token>),
@@ -56,6 +56,7 @@ impl ToString for Token {
         match self {
             Token::Function(name, _, _) => name.to_string(),
             Token::Identifier(name) => String::from(name),
+            Token::String(s) => s.to_string(),
             _ => String::from("")
         }
     }

@@ -23,9 +23,9 @@ parser!(pub grammar parser() for str {
     rule single_statement() -> Token
         = WHITESPACE() s:(
             assert() /
+            print() /
             var() /
             assignment() /
-            print() /
             call() /
             rtn() /
             chain()
@@ -42,7 +42,7 @@ parser!(pub grammar parser() for str {
 
     // import external file
     rule import() -> Token
-        = "import" _ s:string() _ SEMICOLON()+ { Token::Import(s) }
+        = "import" _ s:string() _ SEMICOLON()+ { Token::Import(s.to_string()) }
 
     // single line comment
     rule comment() -> Token
@@ -81,7 +81,7 @@ parser!(pub grammar parser() for str {
 
     // print value
     rule print() -> Token
-        = "print" _ e:expression() { Token::Print(Box::new(e)) }
+        = "print " _ e:expression() { Token::Print(Box::new(e)) }
 
     // anonymous function call
     rule anonfunc() -> Token
@@ -166,7 +166,7 @@ parser!(pub grammar parser() for str {
         / n:null() { n }
         / b:boolean() { b }
         / i:identifier() { i }
-        / "\"" s:string() "\"" { Token::String(s) }
+        / s:string() { s }
         / list()
         / json()
 
@@ -198,9 +198,8 @@ parser!(pub grammar parser() for str {
         = i:identifier() indexes:("[" e:expression() "]" { e })+ { Token::Index(Box::new(i), indexes) }
         / expected!("array index")
 
-    rule string() -> String
-        = n:$([^'"']*) { n.to_owned() }
-        / expected!("string")
+    rule string() -> Token
+        = "\""  n:$([^'"']*) "\""  { Token::String(n.to_owned()) }
 
     rule integer() -> i32
         = n:$("-"? ['0'..='9']+) { n.parse().unwrap() }
@@ -212,7 +211,7 @@ parser!(pub grammar parser() for str {
         = quiet!{ "[" WHITESPACE() elements:(( WHITESPACE() e:expression() _ {e}) ** ",") WHITESPACE() "]" { Token::Array(elements) } }
 
     rule json() -> Token
-        = quiet!{ "{" WHITESPACE() kv:(( WHITESPACE() "\"" k:string() "\"" _ ":" _ e:expression() _ {  Token::KeyValuePair(k, Box::new(e)) } ) ** ",") WHITESPACE() "}" { Token::Dictionary(kv) } }
+        = quiet!{ "{" WHITESPACE() kv:(( WHITESPACE() "\"" k:string() "\"" _ ":" _ e:expression() _ {  Token::KeyValuePair(k.to_string(), Box::new(e)) } ) ** ",") WHITESPACE() "}" { Token::Dictionary(kv) } }
 
 
 

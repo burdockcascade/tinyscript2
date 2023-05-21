@@ -2,11 +2,16 @@ use tinyscript::{compile, compile_and_run};
 use tinyscript::vm::value::Value;
 
 #[test]
-fn test_compile() {
-    compile(include_str!("test.tny")).expect("should compile");
+fn test_hello_world() {
+    assert_eq!(compile_and_run(include_str!("00_hello_world.tny"), "HelloWorld.main", Value::Array(vec![])).unwrap(), Value::Null);
 }
 
 #[test]
-fn helloworld() {
-    assert_eq!(compile_and_run(include_str!("test.tny"), String::from("main.main"), Value::Array(vec![])).unwrap(), Value::Null);
+fn test_variables() {
+    assert_eq!(compile_and_run(include_str!("01_variables.tny"), "Variables.main", Value::Array(vec![])).unwrap(), Value::Null);
+}
+
+#[test]
+fn test_loops() {
+    assert_eq!(compile_and_run(include_str!("03_loops.tny"), "LoopTest.main", Value::Array(vec![])).unwrap(), Value::Null);
 }

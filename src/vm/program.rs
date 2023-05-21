@@ -5,7 +5,7 @@ use crate::vm::value::Value;
 // Program
 pub struct Program {
     pub instructions: Vec<Instruction>,
-    pub symbols: HashMap<String, i32>,
+    pub symbols: HashMap<String, usize>,
     pub globals: Vec<Value>,
 }
 
@@ -20,12 +20,12 @@ impl Program {
     }
 
     // insert into globals and return index
-    pub fn insert_global(&mut self, value: Value) -> i32 {
+    pub fn insert_global(&mut self, value: Value) -> usize {
         self.globals.push(value);
-        self.globals.len() as i32 - 1
+        self.globals.len() - 1
     }
 
-    pub fn insert_into_symbols(&mut self, name: String, index: i32) {
+    pub fn insert_into_symbols(&mut self, name: String, index: usize) {
         self.symbols.insert(name, index);
     }
 
