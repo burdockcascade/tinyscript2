@@ -240,26 +240,3 @@ class person {
     }
 }
 
-class fibonaci {
-
-    function test_fib() {
-
-        var count = 10;
-        var expected = 55;
-        assert fib(count) == expected;
-
-    }
-
-    function fib(n) {
-
-        if n == 0 {
-            return 0;
-        }
-
-        if n == 1 {
-            return 1;
-        }
-
-        return fib(n - 1) + fib(n - 2);
-    }
-}

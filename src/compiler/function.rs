@@ -351,6 +351,11 @@ impl Function {
         // load object
         self.instructions.push(Instruction::LoadLocalVariable(obj_var));
 
+        // load params
+        for param in params {
+            self.compile_expression(param);
+        }
+
         // call constructor
         self.instructions.push(Instruction::Call(params.len() + 1));
 

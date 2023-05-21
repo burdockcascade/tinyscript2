@@ -17,6 +17,16 @@ fn test_ifs() {
 }
 
 #[test]
+fn test_class_constructor() {
+    assert_eq!(compile_and_run(include_str!("04_class_constructor.tny"), "Ifs.main", Value::Array(vec![])).unwrap(), Value::Null);
+}
+
+#[test]
 fn test_loops() {
     assert_eq!(compile_and_run(include_str!("03_loops.tny"), "LoopTest.main", Value::Array(vec![])).unwrap(), Value::Null);
+}
+
+#[test]
+fn test_fibonacci() {
+    assert_eq!(compile_and_run(include_str!("21_fib.tny"), "Fibonacci.main", Value::Array(vec![])).unwrap(), Value::Null);
 }

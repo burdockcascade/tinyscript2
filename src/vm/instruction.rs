@@ -10,7 +10,6 @@ pub enum Instruction {
 
     // Stack
     StackPush(Value),
-    StackPop(i32),
 
     // Variables
     MoveToLocalVariable(usize),
