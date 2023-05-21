@@ -134,30 +134,6 @@ impl Compiler {
                         }
                     }
                 }
-                // Token::Function(func_name, params, items) => {
-                //
-                //     // compile new function
-                //     debug!("compiling function {}", func_name);
-                //     trace!("{} parameters and {} statements", params.len(), items.len());
-                //     let f = Function::new(func_name, params.as_slice(), items.as_slice(),self.global_lookup.clone());
-                //
-                //     // compile anonymous functions
-                //     for af in f.get_anonymous_functions().iter() {
-                //
-                //         match af {
-                //             Token::Function(anon_name, params, statements) => {
-                //                 debug!("compiling anonymous function {}", anon_name);
-                //                 trace!("{} parameters and {} statements", params.len(), statements.len());
-                //                 self.functions.push(Function::new(&anon_name, params.as_slice(), statements.as_slice(),self.global_lookup.clone()));
-                //             }
-                //             _ => unreachable!("anonymous function is not a function")
-                //         }
-                //     }
-                //
-                //     // push the function to the functions vector
-                //     self.functions.push(f);
-                //
-                // },
                 _ => {}
             }
         }

@@ -12,6 +12,11 @@ fn test_variables() {
 }
 
 #[test]
+fn test_ifs() {
+    assert_eq!(compile_and_run(include_str!("02_ifs.tny"), "Ifs.main", Value::Array(vec![])).unwrap(), Value::Null);
+}
+
+#[test]
 fn test_loops() {
     assert_eq!(compile_and_run(include_str!("03_loops.tny"), "LoopTest.main", Value::Array(vec![])).unwrap(), Value::Null);
 }

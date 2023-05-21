@@ -1,0 +1,48 @@
+class Ifs {
+    function main() {
+        var i = new Ifs();
+    }
+
+    function constructor() {
+
+        assert test_if_true(true);
+        assert test_if_false(false);
+        assert test_if_else(true);
+
+        if true {
+            assert true;
+        } else {
+            assert false;
+        }
+
+        if false {
+            assert false;
+        } else {
+            assert true;
+        }
+
+    }
+
+    function test_if_true(b) {
+        if b {
+            return true;
+        }
+        return false;
+    }
+
+    function test_if_false(b) {
+        if b {
+            return false;
+        }
+        return true;
+    }
+
+    function test_if_else(b) {
+        if b {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+}

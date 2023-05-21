@@ -36,8 +36,8 @@ pub enum Instruction {
 
     // Instructions
     Call(usize),
-    Jump(i32),
-    JumpIfTrue(i32),
+    JumpForward(usize),
+    JumpBackward(usize),
     JumpIfFalse(i32),
     Return(bool),
 

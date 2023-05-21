@@ -217,8 +217,7 @@ impl Function {
         self.compile_statement(step);
 
         // Goto loop start
-        let ins_to_skip = start_of_loop as i32 - self.instructions.len() as i32;
-        self.instructions.push(Instruction::Jump(ins_to_skip));
+        self.instructions.push(Instruction::JumpBackward(self.instructions.len() - start_of_loop));
 
         // Update jump not true value
         let jump_to_pos = self.instructions.len() - jump_not_true;
@@ -244,8 +243,7 @@ impl Function {
         self.compile_statements(block);
 
         // Goto loop start
-        let ins_to_skip = start_ins_ptr as i32 - self.instructions.len() as i32;
-        self.instructions.push(Instruction::Jump(ins_to_skip));
+        self.instructions.push(Instruction::JumpBackward(self.instructions.len() - start_ins_ptr));
 
         // Update jump not true value
         let jump_to_pos = self.instructions.len() - jump_not_true;
@@ -297,9 +295,6 @@ impl Function {
         let jump_to_pos = start_ins_ptr as i32 - self.instructions.len() as i32;
         self.instructions.push(Instruction::JumpIfFalse(jump_to_pos as i32));
 
-
-        // Clean up stack
-        // self.funcstack[self.scope].instructions.push(Instruction::StackPop(2));
     }
 
 
@@ -331,8 +326,7 @@ impl Function {
         }
 
         // Update Jump to End
-        let jump_to_pos = self.instructions.len() - jump_to_end;
-        self.instructions[jump_to_end] = Instruction::Jump(jump_to_pos as i32);
+        self.instructions[jump_to_end] = Instruction::JumpForward(self.instructions.len() - jump_to_end);
     }
 
     fn compile_new_object(&mut self, class_name: String, params: &[Token]) {

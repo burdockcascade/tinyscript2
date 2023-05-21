@@ -172,31 +172,14 @@ impl VM {
 
                 // CONDITIONS
 
-                Instruction::Jump(delta) => {
-                    trace!("moving instruction pointer by {}", delta);
-
-                    if *delta > 0 {
-                        self.ip += *delta as usize;
-                    } else {
-                        self.ip -= *delta as usize;
-                    }
+                Instruction::JumpForward(delta) => {
+                    trace!("jumping forward by {}", delta);
+                    self.ip += *delta as usize;
                 }
 
-                Instruction::JumpIfTrue(delta) => {
-                    let b = frame.pop_value_from_stack();
-                    trace!("jumping if {} is true", b);
-
-                    match b {
-                        Value::Bool(true) =>{
-                            if *delta > 0 {
-                                self.ip += *delta as usize;
-                            } else {
-                                self.ip -= *delta as usize;
-                            }
-                        },
-                        _ => self.ip += 1
-                    }
-
+                Instruction::JumpBackward(delta) => {
+                    trace!("jumping backward by {}", delta);
+                    self.ip -= *delta as usize;
                 }
 
                 Instruction::JumpIfFalse(delta) => {
