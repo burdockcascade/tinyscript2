@@ -8,7 +8,6 @@ parser!(pub grammar parser() for str {
     pub rule script() -> Vec<Token>
         = WHITESPACE() f:(import()
         / class()
-        / function()
         / comment()
     )* WHITESPACE() { f }
 
@@ -51,7 +50,7 @@ parser!(pub grammar parser() for str {
     // class definition
     rule class() -> Token
         = "class" WHITESPACE() i:identifier() WHITESPACE() "{" WHITESPACE()
-        items:(WHITESPACE() item:(var_statement() / function()) WHITESPACE() { item })*
+        items:(WHITESPACE() item:(var_statement() / constructor() / function()) WHITESPACE() { item })*
         WHITESPACE() "}" WHITESPACE()
     { Token::Class(i.to_string(), items) }
 
@@ -61,6 +60,11 @@ parser!(pub grammar parser() for str {
 
     rule chain_item() -> Token
         = item:(array_index() / call() / identifier()) { item }
+
+    // constructor
+    rule constructor() -> Token
+        = "constructor" _ "()" stmts:block() { Token::Constructor(vec![], stmts) }
+        / "constructor" _ "(" params:param_list() ")" stmts:block() { Token::Constructor(params, stmts) }
 
     // function definition with parameters
     rule function() -> Token
@@ -94,15 +98,15 @@ parser!(pub grammar parser() for str {
 
     // variable declaration either with a value or default to null
     rule var() -> Token
-        = "var" _ name:identifier() WHITESPACE() "=" WHITESPACE() e:expression() {  Token::Variable(name.to_string(), Box::new(e)) } /
-          "var" _ name:identifier() { Token::Variable(name.to_string(), Box::new(Token::Null)) }
+        = "var" _ i:identifier() WHITESPACE() "=" WHITESPACE() e:expression() {  Token::Variable(Box::new(i), Box::new(e)) } /
+          "var" _ i:identifier() { Token::Variable(Box::new(i), Box::new(Token::Null)) }
 
 
 
 
     // existing variable assignment
     rule assignment() -> Token
-        = name:assignment_left() WHITESPACE() "=" WHITESPACE() r:expression() {  Token::Assign(name.to_string(), Box::new(r)) }
+        = left:assignment_left_item() WHITESPACE() "=" WHITESPACE() r:expression() {  Token::Assign(Box::new(left), Box::new(r)) }
         / expected!("variable assignment")
 
     rule assignment_left() -> Token
@@ -195,8 +199,10 @@ parser!(pub grammar parser() for str {
         / expected!("identifier")
 
     rule array_index() -> Token
-        = i:identifier() indexes:("[" e:expression() "]" { e })+ { Token::Index(Box::new(i), indexes) }
+        = i:identifier() "[" _ e:expression() _ "]" { Token::ArrayIndex(Box::new(i), Box::new(e)) }
         / expected!("array index")
+
+
 
     rule string() -> Token
         = "\""  n:$([^'"']*) "\""  { Token::String(n.to_owned()) }
