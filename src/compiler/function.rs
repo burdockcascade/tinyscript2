@@ -1,6 +1,9 @@
 use std::collections::HashMap;
-use log::{error, info, trace};
+use std::env::var;
+use log::{debug, error, info, trace};
+use crate::compiler::compiler::CLASS_CONSTRUCTOR_FUNCTION_NAME;
 use crate::compiler::token::Token;
+use crate::compiler::variable::Variable;
 use crate::vm::instruction::Instruction;
 use crate::vm::value::Value;
 
@@ -14,7 +17,7 @@ pub struct Function {
     statements: Vec<Token>,
     instructions: Vec<Instruction>,
     anonymous_functions: Vec<Token>,
-    variables: HashMap<String, usize>,
+    variables: HashMap<String, Variable>,
     pub globals: HashMap<String, Value>,
     pub global_lookup: HashMap<String, usize>,
 }
@@ -54,14 +57,7 @@ impl Function {
         self.parameters.insert(0, Token::Identifier(CLASS_SELF_VARIABLE_NAME.to_string()));
 
         // store the parameters as variables
-        for param in self.parameters.iter() {
-            let pname = param.to_string();
-            trace!("storing parameter as variable '{}'", pname);
-
-            // fixme call the function to get the index
-            let vlen = self.variables.len();
-            self.variables.entry(pname).or_insert(vlen);
-        }
+        self.add_parameters(self.parameters.clone());
 
         // compile the statements
         self.compile_statements(self.statements.clone().as_slice());
@@ -72,6 +68,14 @@ impl Function {
         }
 
         self.instructions
+    }
+
+    fn add_parameters(&mut self, parameters: Vec<Token>) {
+        for param in parameters {
+            let pname = param.to_string();
+            trace!("storing parameter as variable '{}'", pname);
+            self.add_variable(pname, Value::Null);
+        }
     }
 
     // get name
@@ -119,16 +123,20 @@ impl Function {
 
             // push load object member instruction onto stack
             match item {
-                Token::Identifier(name) => self.instructions.push(Instruction::LoadObjectMember(name.to_string())),
+                Token::Identifier(name) => {
+                    self.instructions.push(Instruction::StackPush(Value::String(name.to_string())));
+                    self.instructions.push(Instruction::GetKeyValue)
+                },
                 Token::Call(name, args) => {
 
                     // load the object member
                     trace!("loading object member {:?}", name);
-                    self.instructions.push(Instruction::LoadObjectMember(name.to_string()));
+                    self.instructions.push(Instruction::StackPush(Value::String(name.to_string())));
+                    self.instructions.push(Instruction::GetKeyValue);
 
                     // push 'this' onto stack
-                    let var_idx = self.get_variable_slot(start.to_string());
-                    self.instructions.push(Instruction::LoadLocalVariable(var_idx));
+                    let variable = self.get_variable(start.to_string());
+                    self.instructions.push(Instruction::LoadLocalVariable(variable.index));
 
                     // compile the arguments
                     for arg in args {
@@ -157,36 +165,59 @@ impl Function {
     // compile a variable declaration
     fn compile_variable(&mut self, name: &Box<Token>, value: &Box<Token>) {
 
-        if matches!(**name, Token::Identifier(_)) == false {
-            panic!("variable name is not an identifier");
-        }
-
         // Declare variable
-        self.add_variable(name.to_string());
+        self.add_variable(name.to_string(), Value::Null);
+        let slot = self.get_variable(name.to_string()).index;
 
-        // Compile variable value
-        self.compile_assignment(name, value);
+        // compile the value
+        self.compile_expression(value);
+
+        // store the value
+        self.instructions.push(Instruction::MoveToLocalVariable(slot));
     }
 
     // compile assignment
     fn compile_assignment(&mut self, left: &Box<Token>, right: &Box<Token>) {
 
-        info!("compiling assignment {:?} = {:?}", left, right);
+        debug!("compiling assignment {:?} = {:?}", left, right);
 
         match *left.clone() {
+
+            // store value in variable
             Token::Identifier(name) => {
                 trace!("storing value in variable {}", name.to_string());
-                let slot = self.get_variable_slot(name.to_string());
+
+                // get the variable slot
+                let slot = self.get_variable(name.to_string()).index;
+
+                // compile the value
                 self.compile_expression(right);
+
+                // store the value
                 self.instructions.push(Instruction::MoveToLocalVariable(slot));
             },
+
+            // store value in array index
             Token::ArrayIndex(name, index) => {
                 trace!("storing value in index {:?} of {}", index, name.to_string());
-                let slot = self.get_variable_slot(name.to_string());
+
+                // load the variable
+                let slot = self.get_variable(name.to_string()).index;
+                self.instructions.push(Instruction::LoadLocalVariable(slot));
+
+                // compile the value
                 self.compile_expression(right);
-                self.compile_expression(left);
-                self.instructions.push(Instruction::SetKeyValue(slot));
+
+                // compile the index
+                self.compile_expression(&index.clone());
+
+                // add value to array
+                self.instructions.push(Instruction::SetKeyValue);
+
+                // update variable
+                self.instructions.push(Instruction::MoveToLocalVariable(slot));
             },
+
             _ => panic!("name is not an identifier or index")
         }
 
@@ -342,11 +373,14 @@ impl Function {
         self.instructions.push(Instruction::CreateObject);
 
         // store object in temp variable
-        let obj_var = self.create_temp_variable();
+        let tmp_name = format!("tmp{}", self.instructions.len());
+        self.add_variable(tmp_name.clone(), Value::Null);
+        let obj_var = self.get_variable(tmp_name.clone()).index;
         self.instructions.push(Instruction::CopyToLocalVariable(obj_var));
 
         // load constructor functionref
-        self.instructions.push(Instruction::LoadObjectMember(String::from("constructor")));
+        self.instructions.push(Instruction::StackPush(Value::String(CLASS_CONSTRUCTOR_FUNCTION_NAME.parse().unwrap())));
+        self.instructions.push(Instruction::GetKeyValue);
 
         // load object
         self.instructions.push(Instruction::LoadLocalVariable(obj_var));
@@ -407,7 +441,7 @@ impl Function {
 
             Token::Identifier(id) => {
                 trace!("pushing {:?} onto stack", token);
-                let idx = self.get_variable_slot(id.clone());
+                let idx = self.get_variable(id.clone()).index;
                 self.instructions.push(Instruction::LoadLocalVariable(idx));
             }
 
@@ -443,15 +477,15 @@ impl Function {
             Token::ArrayIndex(id, index) => {
                 trace!("i = {:?}, e = {:?}", id, index);
 
-                let idx = self.get_variable_slot(id.to_string());
-
+                // load array
+                let idx = self.get_variable(id.to_string()).index;
                 self.instructions.push(Instruction::LoadLocalVariable(idx));
 
-                if let Token::Integer(i) = **index {
-                    self.instructions.push(Instruction::GetKeyValue(i as usize));
-                } else {
-                    panic!("array index must be integer")
-                }
+                // compile index
+                self.compile_expression(index);
+
+                // get array value
+                self.instructions.push(Instruction::GetKeyValue);
 
             }
 
@@ -549,11 +583,12 @@ impl Function {
 
         // push functionref onto stack
         if self.variables.contains_key(&*name.to_string()) {
-            let index = self.get_variable_slot(name.to_string());
+            let index = self.get_variable(name.to_string()).index;
             self.instructions.push(Instruction::LoadLocalVariable(index))
         } else {
             self.instructions.push(Instruction::LoadLocalVariable(0));
-            self.instructions.push(Instruction::LoadObjectMember(name.to_string()));
+            self.instructions.push(Instruction::StackPush(Value::String(name.to_string())));
+            self.instructions.push(Instruction::GetKeyValue);
             self.instructions.push(Instruction::LoadLocalVariable(0));
             arg_len += 1;
         }
@@ -572,29 +607,28 @@ impl Function {
         self.instructions.push(Instruction::Return(true));
     }
 
-    // create a new temporary variable
-    fn create_temp_variable(&mut self) -> usize {
-        self.add_variable(format!("var{}", self.variables.len()))
-    }
-
     // get index of variable or error if it doesn't exist
-    fn get_variable_slot(&self, name: String) -> usize {
-        if let Some(index) = self.variables.get(&*name) {
-            *index
+    fn get_variable(&self, name: String) -> &Variable {
+        if let Some(variable) = self.variables.get(&*name) {
+            variable
         } else {
             panic!("variable '{}' does not exist", name);
         }
     }
 
     // add variable and return its index or error if it already exists
-    fn add_variable(&mut self, name: String) -> usize {
-        if self.variables.contains_key(&name) {
+    fn add_variable(&mut self, name: String, value: Value) {
+
+        // check if variable already exists
+        if self.variables.contains_key(name.as_str()) {
             panic!("variable '{}' already exists", name);
         }
 
-        let vlen = self.variables.len();
-        self.variables.insert(name, vlen);
-        vlen
+        // create variable
+        let variable = Variable::new(name.clone(), self.variables.len(), value);
+
+        // add variable to list
+        self.variables.insert(name.clone(), variable);
     }
 
 

@@ -14,6 +14,7 @@ pub(crate) mod program;
 pub(crate) mod instruction;
 mod frame;
 
+
 // Virtual Machine
 pub struct VM {
     instructions: Vec<Instruction>,
@@ -64,7 +65,7 @@ impl VM {
             let instruction = self.instructions.get(self.ip as usize).expect(&*format!("instruction #{} should exist", self.ip));
 
             debug!("");
-            debug!( "== loop [frame {}; ip:{} ({:?})]", frame.get_name(), self.ip, instruction);
+            debug!("== loop [frame {}; ip:{} ({:?})]", frame.get_name(), self.ip, instruction);
             frame.print_debug_info();
 
             match instruction {
@@ -74,7 +75,7 @@ impl VM {
                     trace!("asserting '{}' is true", output);
                     match output {
                         Value::Bool(val) => assert!(val),
-                        _ => error!("unable to assert {}", output)
+                        _ => panic!("unable to assert {}", output)
                     }
 
                     self.ip += 1;
@@ -155,22 +156,9 @@ impl VM {
                     self.ip += 1;
                 }
 
-                // load member from object
-                Instruction::LoadObjectMember(member) => {
-                    let object = frame.pop_value_from_stack();
-                    match object {
-                        Value::Object(obj) => {
-                            let o = obj.borrow_mut();
-                            let value = o.get(member).expect(&*format!("member '{}' should exist in object", member));
-                            trace!("pushing value '{}' onto stack", value);
-                            frame.push_value_to_stack(value.clone());
-                        },
-                        _ => unreachable!("{} is not an object", object)
-                    }
-                    self.ip += 1;
-                }
 
-                // CONDITIONS
+                //==================================================================================
+                // CONTROL FLOW
 
                 Instruction::JumpForward(delta) => {
                     trace!("jumping forward by {}", delta);
@@ -198,36 +186,77 @@ impl VM {
                     }
                 }
 
+
+                //==================================================================================
+                // STACK
+
                 // Push value onto stack
                 Instruction::StackPush(variant) => {
                     frame.push_value_to_stack(variant.clone());
                     self.ip += 1
                 }
 
+
+                //==================================================================================
+                // VARIABLES
+
                 // get value from stack and store in variable
                 Instruction::MoveToLocalVariable(index) => {
-                    frame.move_from_stack_to_variable_slot(*index as usize);
+                    frame.move_from_stack_to_variable_slot(*index);
                     self.ip += 1;
                 }
 
                 Instruction::CopyToLocalVariable(index) => {
-                    frame.copy_from_stack_to_variable_slot(*index as usize);
+                    frame.copy_from_stack_to_variable_slot(*index);
                     self.ip += 1;
                 }
 
                 // get value from variable and push onto stack
                 Instruction::LoadLocalVariable(index) => {
-                    frame.copy_from_variable_slot_to_stack(*index as usize);
+                    frame.copy_from_variable_slot_to_stack(*index);
                     self.ip += 1;
                 }
 
                 // load from global
                 Instruction::LoadGlobal(index) => {
-                    let value = self.globals.get(*index as usize).expect(&*format!("global '{}' not found", index));
+                    let value = self.globals.get(*index).expect(&*format!("global '{}'should exist", index));
                     frame.push_value_to_stack(value.clone());
                     self.ip += 1;
                 }
 
+                //==================================================================================
+                // DICTIONARY
+
+                Instruction::DictionaryAdd => {
+                    let value = frame.pop_value_from_stack();
+                    let key = frame.pop_value_from_stack();
+                    let dict = frame.pop_value_from_stack();
+
+                    if let Value::Dictionary(mut v) = dict {
+                        v.insert(key.to_string(), value);
+                        frame.push_value_to_stack(Value::Dictionary(v));
+                    }
+
+                    self.ip += 1;
+                }
+
+                //==================================================================================
+                // ARRAYS
+
+                // get array length
+                Instruction::ArrayLength => {
+
+                    let array = frame.pop_value_from_stack();
+
+                    if let Value::Array(val) = array {
+                        frame.push_value_to_stack(Value::Integer(val.len() as i32));
+                    } else {
+                        panic!("can not get length on non-array {}", array)
+                    }
+
+                    self.ip += 1;
+
+                }
 
                 // add value to array
                 Instruction::ArrayAdd => {
@@ -239,73 +268,74 @@ impl VM {
                     }
 
                     self.ip += 1;
-
                 }
 
-                Instruction::LoadIndexedValue => {
+                Instruction::GetKeyValue => {
 
-                    let (v, index) = frame.pop_2_values_from_stack();
-                    trace!("looking up {:?} in {:?}", index, v);
+                    let index = frame.pop_value_from_stack();
+                    let array = frame.pop_value_from_stack();
+                    trace!("looking up {:?} in {:?}", index, array);
 
-                    match (v, index) {
-                        (Value::Array(items), Value::Integer(idx)) => {
-                            let item = items[idx as usize].clone();
-                            frame.push_value_to_stack(item);
+                    match array {
+                        Value::Array(items) => {
+                            match index {
+                                Value::Integer(idx) => {
+                                    let item = items.get(idx as usize).clone();
+                                    match item {
+                                        Some(v) => frame.push_value_to_stack(v.clone()),
+                                        None => panic!("slot '{}' should exist in array", idx)
+                                    }
+                                },
+                                _ => panic!("can not get index on non-integer")
+                            }
                         },
-                        (Value::Dictionary(keys), Value::String(key)) => {
-                            let item = keys.get(&*key).expect(&*format!("key {} does not exist in dictionary", key.as_str())).clone();
-                            frame.push_value_to_stack(item);
-                        },
-                        _ => {
-                            error!("variable has no index");
-                            break;
+                        Value::Dictionary(items) => {
+                            if let Value::String(idx) = index {
+                                let item = items.get(&*idx).clone();
+                                match item {
+                                    Some(v) => frame.push_value_to_stack(v.clone()),
+                                    None => panic!("key '{}' should exist in dictionary", idx)
+                                }
+                            } else {
+                                panic!("can not get index on non-string");
+                            }
                         }
+                        _ => panic!("can not get index on non-array")
                     }
 
                     self.ip += 1;
-                }
+                },
 
-                Instruction::ArrayLength => {
+                Instruction::SetKeyValue => {
 
-                    let v = frame.pop_value_from_stack();
-
-                    match v {
-                        Value::Array(val) => frame.push_value_to_stack(Value::Integer(val.len() as i32)),
-                        _ => unreachable!("can not get length on non-array {}", v)
-                    }
-
-                    self.ip += 1;
-
-                }
-
-                Instruction::SetObjectMember(member) => {
-                    let object = frame.pop_value_from_stack();
+                    let index = frame.pop_value_from_stack();
                     let value = frame.pop_value_from_stack();
+                    let array = frame.pop_value_from_stack();
 
-                    if let Value::Object(v) = object {
-
-                        let mut o = v.borrow_mut();
-
-                        o.insert(member.to_string(), value);
-                        frame.push_value_to_stack(Value::Object(Rc::new(RefCell::new(o.clone()))));
-
+                    match array {
+                        Value::Array(mut items) => {
+                            if let Value::Integer(idx) = index {
+                                items[idx as usize] = value;
+                                frame.push_value_to_stack(Value::Array(items));
+                            } else {
+                                panic!("can not get index on non-integer");
+                            }
+                        },
+                        Value::Dictionary(mut items) => {
+                            if let Value::String(idx) = index {
+                                items.insert(idx, value);
+                                frame.push_value_to_stack(Value::Dictionary(items));
+                            } else {
+                                panic!("can not get index on non-string");
+                            }
+                        }
+                        _ => panic!("can not get index on non-array")
                     }
 
                     self.ip += 1;
                 }
 
-                Instruction::DictionaryAdd => {
-                    let (key, value) = frame.pop_2_values_from_stack();
-                    let dict = frame.pop_value_from_stack();
-
-                    if let Value::Dictionary(mut v) = dict {
-                        v.insert(key.to_string(), value);
-                        frame.push_value_to_stack(Value::Dictionary(v));
-                    }
-
-                    self.ip += 1;
-                }
-
+                //==================================================================================
                 // ARITHMETIC
 
                 Instruction::Add => {
@@ -337,7 +367,7 @@ impl VM {
                     self.ip += 1;
                 }
 
-
+                //==================================================================================
                 // OPERANDS
 
                 Instruction::Equal => {
@@ -376,6 +406,7 @@ impl VM {
                     self.ip += 1;
                 }
 
+                //==================================================================================
                 // CONTROL
 
                 Instruction::Halt(msg) => {

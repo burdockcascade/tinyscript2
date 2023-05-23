@@ -1,0 +1,23 @@
+class Test {
+    function main() {
+
+        var boolean1 = true;
+        assert boolean1 == true;
+
+        var boolean2 = false;
+        assert boolean2 == false;
+
+        var boolean3 = true;
+        assert boolean3 == true;
+
+        var boolean4 = false;
+        assert boolean4 == false;
+
+        var boolean5 = true;
+        assert boolean5 == true;
+
+        var booleanSum = boolean1 + boolean2 + boolean3 + boolean4 + boolean5;
+        assert booleanSum == false;
+
+    }
+}

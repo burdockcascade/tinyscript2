@@ -111,6 +111,14 @@ impl Frame {
         return (lhs, rhs);
     }
 
+    // pop 3 values from the stack
+    pub fn pop_3_values_from_stack(&mut self) -> (Value, Value, Value) {
+        let v1 = self.pop_value_from_stack();
+        let v2 = self.pop_value_from_stack();
+        let v3 = self.pop_value_from_stack();
+        return (v3, v2, v1);
+    }
+
     // pop values from the stack
     pub fn pop_values_from_stack(&mut self, count: usize) -> Vec<Value> {
         trace!("pop {} values from stack", count);

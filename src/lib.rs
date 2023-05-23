@@ -2,7 +2,6 @@ use log::LevelFilter;
 use simplelog::{ColorChoice, Config, TerminalMode, TermLogger};
 use crate::compiler::compile;
 
-use crate::vm::program::Program;
 use crate::vm::value::Value;
 use crate::vm::VM;
 

@@ -114,7 +114,7 @@ parser!(pub grammar parser() for str {
         / a:assignment_left_item() { a }
 
     rule assignment_left_item() -> Token
-        = item:(array_index() / identifier()) { item }
+        = item:(chain() / array_index() / identifier()) { item }
 
 
     rule if_else() -> Token
@@ -172,7 +172,7 @@ parser!(pub grammar parser() for str {
         / i:identifier() { i }
         / s:string() { s }
         / list()
-        / json()
+        / dictionary()
 
     rule null() -> Token
         = "null" { Token::Null }
@@ -216,8 +216,8 @@ parser!(pub grammar parser() for str {
     rule list() -> Token
         = quiet!{ "[" WHITESPACE() elements:(( WHITESPACE() e:expression() _ {e}) ** ",") WHITESPACE() "]" { Token::Array(elements) } }
 
-    rule json() -> Token
-        = quiet!{ "{" WHITESPACE() kv:(( WHITESPACE() "\"" k:string() "\"" _ ":" _ e:expression() _ {  Token::KeyValuePair(k.to_string(), Box::new(e)) } ) ** ",") WHITESPACE() "}" { Token::Dictionary(kv) } }
+    rule dictionary() -> Token
+        = "{" WHITESPACE() kv:(( WHITESPACE() k:string() WHITESPACE() ":" WHITESPACE() e:expression() WHITESPACE() {  Token::KeyValuePair(k.to_string(), Box::new(e)) } ) ** ",") WHITESPACE() "}" { Token::Dictionary(kv) }
 
 
 

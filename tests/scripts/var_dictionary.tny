@@ -1,0 +1,22 @@
+class Test {
+    function main() {
+
+        var dictionary = { "key1": "value1", "key2": "value2", "key3": "value3" };
+        assert dictionary["key1"] == "value1";
+        assert dictionary.key1 == "value1";
+
+        assert dictionary["key" + 2] == "value2";
+        assert dictionary.key2 == "value2";
+
+        assert dictionary["key3"] == "value3";
+        assert dictionary.key3 == "value3";
+
+        dictionary["key1"] = "value1.1";
+        assert dictionary["key1"] == "value1.1";
+
+        // fixme this is not supported yet
+        dictionary.key1 = "value1.2";
+        assert dictionary.key1 == "value1.2";
+
+    }
+}

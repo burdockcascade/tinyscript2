@@ -5,6 +5,7 @@ mod frontend;
 mod function;
 mod token;
 mod compiler;
+mod variable;
 
 pub fn compile(program: &str) -> Result<Program, String> {
 

@@ -8,7 +8,7 @@ use crate::compiler::token::Token;
 use crate::vm::program::Program;
 use crate::vm::value::Value;
 
-const CLASS_CONSTRUCTOR_FUNCTION_NAME: &str = "constructor";
+pub const CLASS_CONSTRUCTOR_FUNCTION_NAME: &str = "constructor";
 
 // Compiler
 pub struct Compiler {

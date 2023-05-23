@@ -17,8 +17,8 @@ pub enum Instruction {
     LoadLocalVariable(usize),
 
     // Key Value Pairs
-    GetKeyValue(usize),
-    SetKeyValue(usize),
+    GetKeyValue,
+    SetKeyValue,
 
     // Global
     StoreGlobal(usize),
@@ -26,11 +26,8 @@ pub enum Instruction {
 
     // Objects
     CreateObject,
-    LoadObjectMember(String),
-    SetObjectMember(String),
 
     // Dictionaries
-    LoadIndexedValue,
     DictionaryAdd,
 
     // Arrays
