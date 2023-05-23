@@ -1,0 +1,30 @@
+class FunctionTest {
+
+    function main() {
+        var ft = new FunctionTest(true, 1 + 1);
+        assert ft != null;
+
+        var ft2 = new FunctionTest2(true, 5, 92);
+        assert ft2 != null;
+    }
+
+    function constructor(b, c) {
+
+        assert b;
+        assert c == 2;
+
+    }
+
+}
+
+class FunctionTest2 {
+
+    var c1 = true;
+
+    function constructor(b, c, d) {
+        assert b;
+        assert c > 2;
+
+        assert this.c1;
+    }
+}

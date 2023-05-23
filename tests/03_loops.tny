@@ -1,8 +1,11 @@
-class LoopTest {
-
+class Test {
     function main() {
         var loop = new LoopTest();
+        assert loop != null;
     }
+}
+
+class LoopTest {
 
     function constructor() {
         test_for_loop();

@@ -1,0 +1,13 @@
+class Test {
+
+    var num = 99;
+
+    function test99() {
+        assert this.num == 99;
+    }
+
+    function main() {
+        var t = new Test();
+        t.test99();
+    }
+}

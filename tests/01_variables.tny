@@ -1,15 +1,19 @@
-class Variables {
-
+class Test {
     function main() {
         var v = new Variables();
+        assert v != null;
     }
-    
+}
+
+class Variables {
+
     function constructor() {
-        test_strings();
-        test_numbers();
-        test_floats();
-        test_booleans();
-        test_math();
+        assert test_strings();
+        assert test_numbers();
+        assert test_floats();
+        assert test_booleans();
+        assert test_arrays();
+        assert test_dictionary();
     }
 
     function test_strings() {
@@ -32,6 +36,7 @@ class Variables {
         var myStory = "My name is " + myFullName + " and I am " + myAge + " years old. I was born in " + myHomeTown + " and I really like it there.";
         assert myStory == "My name is Sanela Kurtovic and I am 30 years old. I was born in Sarajevo and I really like it there.";
 
+        return true;
     }
 
     function test_numbers() {
@@ -57,6 +62,7 @@ class Variables {
         var average = sum / 5;
         assert average == 15;
 
+        return true;
     }
 
     function test_floats() {
@@ -82,6 +88,7 @@ class Variables {
         var floatAverage = floatSum / 5;
         assert floatAverage == 7.47;
 
+        return true;
     }
 
     function test_booleans() {
@@ -104,12 +111,43 @@ class Variables {
         var booleanSum = boolean1 + boolean2 + boolean3 + boolean4 + boolean5;
         assert booleanSum == false;
 
+        return true;
     }
 
-    function test_math() {
+    function test_arrays() {
 
-        var math = 5 + 4 * 3;
-        assert math == 17;
+        var array = [1, 2, 3, 4, 5];
+        assert array[0] == 1;
+        assert array[1] == 2;
+        assert array[2] == 3;
+        assert array[3] == 4;
+        assert array[4] == 5;
 
+        array[0] = 10;
+        assert array[0] == 10;
+
+        array[1] = 20;
+        assert array[1] == 20;
+
+        array[2] = 30;
+        assert array[2] == 30;
+
+        return true;
     }
+
+    function test_dictionary() {
+
+        var dictionary = { "key1": "value1", "key2": "value2", "key3": "value3" };
+        assert dictionary["key1"] == "value1";
+        assert dictionary.key1 == "value1";
+
+        assert dictionary["key2"] == "value2";
+        assert dictionary.key2 == "value2";
+
+        assert dictionary["key3"] == "value3";
+        assert dictionary.key3 == "value3";
+
+        return true;
+    }
+
 }

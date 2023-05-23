@@ -1,12 +1,14 @@
-class Fibonacci {
-
+class Test {
     function main() {
         var fib = new Fibonacci();
-    }
+        assert fib != null;
 
-    function constructor() {
-        fib_quick();
+        fib.fib_quick();
+
     }
+}
+
+class Fibonacci {
 
     function fib_quick() {
         var count = 10;
@@ -21,6 +23,8 @@ class Fibonacci {
     }
 
     function fib(n) {
+
+        assert n <= 55;
 
         if n == 0 {
             return 0;

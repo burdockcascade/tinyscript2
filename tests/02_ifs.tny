@@ -1,7 +1,11 @@
-class Ifs {
+class Test {
     function main() {
         var i = new Ifs();
+        assert i != null;
     }
+}
+
+class Ifs {
 
     function constructor() {
 
@@ -19,6 +23,12 @@ class Ifs {
             assert false;
         } else {
             assert true;
+        }
+
+        if 2 > 1 {
+            assert true;
+        } else {
+            assert false;
         }
 
     }
