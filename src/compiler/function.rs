@@ -1,68 +1,82 @@
 use std::collections::HashMap;
-use std::rc::Rc;
-use log::{debug, error, trace};
+use log::{error, info, trace};
 use crate::compiler::token::Token;
 use crate::vm::instruction::Instruction;
 use crate::vm::value::Value;
+
+const CLASS_SELF_VARIABLE_NAME: &str = "this";
 
 // Function
 pub struct Function {
     name: String,
     class_name: String,
+    parameters: Vec<Token>,
+    statements: Vec<Token>,
     instructions: Vec<Instruction>,
     anonymous_functions: Vec<Token>,
     variables: HashMap<String, usize>,
-    global_lookup: HashMap<String, usize>,
+    pub globals: HashMap<String, Value>,
+    pub global_lookup: HashMap<String, usize>,
 }
 
 
 impl Function {
 
-    pub fn new(class_name: &str, func_name: &str, params: &[Token], statements: &[Token], global_lookup: HashMap<String, usize>) -> Self {
-
-        trace!("compiling function '{}' in '{}' with parameters {:?}", func_name, class_name, params);
+    pub fn new(class_name: &str, func_name: &str, parameters: Vec<Token>, statements: Vec<Token>) -> Self {
+        trace!("compiling function '{}' in '{}' with parameters {:?}", func_name, class_name, parameters);
 
         // create a new function
-        let mut f = Function {
+        Function {
             name: func_name.to_string(),
             class_name: class_name.to_string(),
+            parameters,
+            statements,
             instructions: vec![],
             anonymous_functions: vec![],
-            variables: HashMap::default(),
-            global_lookup,
-        };
+            variables: Default::default(),
+            globals: Default::default(),
+            global_lookup: Default::default(),
+        }
+    }
+
+    pub fn compile(mut self, globals: HashMap<String, Value>, global_lookup: HashMap<String, usize>) -> Vec<Instruction> {
+
+        // store the globals
+        self.globals = globals;
+        self.global_lookup = global_lookup;
+
+        // if there are no statements then return
+        if self.statements.is_empty() {
+            return vec![Instruction::Return(false)];
+        }
+
+        // add the 'this' parameter
+        self.parameters.insert(0, Token::Identifier(CLASS_SELF_VARIABLE_NAME.to_string()));
 
         // store the parameters as variables
-        for param in params {
-            trace!("storing parameter as variable '{}'", param.to_string());
-            f.get_or_create_variable_index(param.to_string());
+        for param in self.parameters.iter() {
+            let pname = param.to_string();
+            trace!("storing parameter as variable '{}'", pname);
+
+            // fixme call the function to get the index
+            let vlen = self.variables.len();
+            self.variables.entry(pname).or_insert(vlen);
         }
 
         // compile the statements
-        f.compile_statements(statements);
+        self.compile_statements(self.statements.clone().as_slice());
 
         // if tha last instruction is not a return then add one
-        if matches!(f.instructions.last(), Some(Instruction::Return(_))) == false {
-            f.instructions.push(Instruction::Return(false));
+        if matches!(self.instructions.last(), Some(Instruction::Return(_))) == false {
+            self.instructions.push(Instruction::Return(false));
         }
 
-        return f;
-
+        self.instructions
     }
 
     // get name
-    pub fn get_name(&self) -> &String {
-        return &self.name;
-    }
-
-    // get anonymous functions
-    pub fn get_anonymous_functions(&self) -> &Vec<Token> {
-        return &self.anonymous_functions;
-    }
-
-    // get instructions
-    pub fn get_instructions(&self) -> &Vec<Instruction> {
-        return &self.instructions;
+    pub fn get_full_name(&self) -> String {
+        return format!("{}.{}", self.class_name, self.name);
     }
 
     // compile a list of statements
