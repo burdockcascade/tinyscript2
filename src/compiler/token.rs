@@ -10,11 +10,12 @@ pub enum Token {
     
     AnonFunction(Vec<Token>, Vec<Token>),
     Class(String, Vec<Token>),
+    Constructor(Vec<Token>, Vec<Token>),
     Chain(Box<Token>, Vec<Token>),
     Identifier(String),
 
-    Variable(String, Box<Token>),
-    Assign(String, Box<Token>),
+    Variable(Box<Token>, Box<Token>),
+    Assign(Box<Token>, Box<Token>),
 
     Null,
     Integer(i32),
@@ -27,8 +28,7 @@ pub enum Token {
     Dictionary(Vec<Token>),
     KeyValuePair(String, Box<Token>),
 
-    Index(Box<Token>, Vec<Token>),
-    IndexAssign(Box<Token>, Vec<Token>, Box<Token>),
+    ArrayIndex(Box<Token>, Box<Token>),
 
     Eq(Box<Token>, Box<Token>),
     Ne(Box<Token>, Box<Token>),
@@ -55,7 +55,7 @@ impl ToString for Token {
     fn to_string(&self) -> String {
         match self {
             Token::Function(name, _, _) => name.to_string(),
-            Token::Identifier(name) => String::from(name),
+            Token::Identifier(name) => name.to_string(),
             Token::String(s) => s.to_string(),
             _ => String::from("")
         }
