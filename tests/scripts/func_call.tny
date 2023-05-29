@@ -1,0 +1,12 @@
+class Test {
+
+    function main() {
+        Test.func1(true);
+    }
+
+    function func1(b) {
+        return b;
+    }
+
+
+}

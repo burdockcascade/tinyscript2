@@ -8,7 +8,7 @@ use crate::vm::VM;
 pub mod vm;
 mod compiler;
 
-pub fn run(program: &str, main: &str, params: Value) -> Result<Value, String> {
+pub fn run(program: &str, main: &str, params: Option<Vec<Value>>) -> Result<Value, String> {
 
     let _ = TermLogger::init(LevelFilter::Trace, Config::default(),TerminalMode::Mixed, ColorChoice::Auto);
 

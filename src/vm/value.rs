@@ -12,24 +12,24 @@ pub enum Value {
 
     // Values
     Null,
-    Integer(i32),
-    Float(f32),
+    Integer(i64),
+    Float(f64),
     Bool(bool),
     String(String),
-    Array(Vec<Value>),
-    Dictionary(HashMap<String, Value>),
+    Array(Rc<RefCell<Vec<Value>>>),
+    Dictionary(Rc<RefCell<HashMap<String, Value>>>),
     Class(HashMap<String, Value>),
     Object(Rc<RefCell<HashMap<String, Value>>>),
-    FunctionRef(String)
+    FunctionRef(String),
 }
 
 // function for finding Value by parameter. if its a number then return integer, if its a string then return string, etc.
 impl Value {
 
     pub fn parse(param: &str) -> Value {
-        match param.parse::<i32>() {
+        match param.parse::<i64>() {
             Ok(num) => Value::Integer(num),
-            Err(_) => match param.parse::<f32>() {
+            Err(_) => match param.parse::<f64>() {
                 Ok(num) => Value::Float(num),
                 Err(_) => match param.parse::<bool>() {
                     Ok(b) => Value::Bool(b),
@@ -39,13 +39,6 @@ impl Value {
         }
     }
 
-    // wrap the value in a Rc<RefCell<Value>> so that it can be mutated
-    pub fn wrap_with_ref(self) -> Value {
-        match self {
-            Value::Class(v) => Value::Object(Rc::new(RefCell::new(v))),
-            _ => unimplemented!("todo for {:?}", self),
-        }
-    }
 }
 
 impl Display for Value {
@@ -81,8 +74,8 @@ impl Sub for Value {
     fn sub(self, rhs: Value) -> <Self as Sub<Value>>::Output {
         match (self, rhs) {
             (Value::Integer(v1), Value::Integer(v2)) => Value::Integer(v1 - v2),
-            (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f32 - v2),
-            (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 - v2 as f32),
+            (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f64 - v2),
+            (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 - v2 as f64),
             (Value::Float(v1), Value::Float(v2)) => Value::Float(v1 - v2),
             _ => unreachable!("can not subtract values")
         }
@@ -100,21 +93,24 @@ impl Add for Value {
 
             // add integers together
             (Value::Integer(v1), Value::Integer(v2)) => Value::Integer(v1 + v2),
-            (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f32 + v2),
+            (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f64 + v2),
             (Value::Integer(v1), Value::String(v2)) => Value::String(v1.to_string().add(&*v2)),
 
             // add floats together
-            (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 + v2 as f32),
+            (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 + v2 as f64),
             (Value::Float(v1), Value::Float(v2)) => Value::Float(v1 + v2),
 
             // add strings together
-            (Value::String(v1), Value::String(v2)) => Value::String(v1.add(&*v2)),
+            (Value::String(v1), Value::String(v2))  => Value::String(v1.add(&*v2)),
             (Value::String(v1), Value::Bool(v2)) => Value::String(v1.add(&*v2.to_string())),
             (Value::String(v1), Value::Integer(v2)) => Value::String(v1.add(&*v2.to_string())),
             (Value::String(v1), Value::Float(v2)) => Value::String(v1.add(&*v2.to_string())),
 
             // add arrays together
-            (Value::Array(v1), Value::Array(v2)) => Value::Array([v1, v2].concat()),
+            (Value::Array(v1), Value::Array(v2)) => {
+                v1.borrow_mut().extend(v2.borrow().iter().cloned());
+                Value::Array(v1)
+            },
 
             // add booleans together but only true + true = true
             (Value::Bool(v1), Value::Bool(v2)) => Value::Bool(v1 && v2),
@@ -131,8 +127,8 @@ impl Mul for Value {
     fn mul(self, rhs: Value) -> <Self as Mul<Value>>::Output {
         match (self, rhs) {
             (Value::Integer(v1), Value::Integer(v2)) => Value::Integer(v1 * v2),
-            (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f32 * v2),
-            (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 * v2 as f32),
+            (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f64 * v2),
+            (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 * v2 as f64),
             (Value::Float(v1), Value::Float(v2)) => Value::Float(v1 * v2),
             _ => unreachable!("can not multiply values")
         }
@@ -146,8 +142,8 @@ impl Div for Value {
     fn div(self, rhs: Value) -> <Self as Div<Value>>::Output {
         match (self, rhs) {
             (Value::Integer(v1), Value::Integer(v2)) => Value::Integer(v1 / v2),
-            (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f32 / v2),
-            (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 / v2 as f32),
+            (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f64 / v2),
+            (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 / v2 as f64),
             (Value::Float(v1), Value::Float(v2)) => Value::Float(v1 / v2),
             _ => unreachable!("can not divide values")
         }

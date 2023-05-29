@@ -16,10 +16,6 @@ pub enum Instruction {
     CopyToLocalVariable(usize),
     LoadLocalVariable(usize),
 
-    // Key Value Pairs
-    GetKeyValue,
-    SetKeyValue,
-
     // Global
     StoreGlobal(usize),
     LoadGlobal(usize),
@@ -33,6 +29,10 @@ pub enum Instruction {
     // Arrays
     ArrayLength,
     ArrayAdd,
+
+    // Key Value
+    GetCollectionItemByKey,
+    SetCollectionItemByKey,
 
     // Instructions
     Call(usize),

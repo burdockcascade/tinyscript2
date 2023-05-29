@@ -11,15 +11,16 @@ pub enum Token {
     AnonFunction(Vec<Token>, Vec<Token>),
     Class(String, Vec<Token>),
     Constructor(Vec<Token>, Vec<Token>),
-    Chain(Box<Token>, Vec<Token>),
     Identifier(String),
+
+    DotChain(Box<Token>, Vec<Token>),
 
     Variable(Box<Token>, Box<Token>),
     Assign(Box<Token>, Box<Token>),
 
     Null,
-    Integer(i32),
-    Float(f32),
+    Integer(i64),
+    Float(f64),
     Bool(bool),
     String(String),
     Array(Vec<Token>),

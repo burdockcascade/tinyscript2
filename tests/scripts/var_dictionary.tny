@@ -1,5 +1,5 @@
 class Test {
-    function main() {
+    function test() {
 
         var dictionary = { "key1": "value1", "key2": "value2", "key3": "value3" };
         assert dictionary["key1"] == "value1";
@@ -14,9 +14,7 @@ class Test {
         dictionary["key1"] = "value1.1";
         assert dictionary["key1"] == "value1.1";
 
-        // fixme this is not supported yet
         dictionary.key1 = "value1.2";
         assert dictionary.key1 == "value1.2";
-
     }
 }

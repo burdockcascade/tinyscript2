@@ -1,5 +1,5 @@
 class Test {
-    function main() {
+    function test() {
 
         var boolean1 = true;
         assert boolean1 == true;

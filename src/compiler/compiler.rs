@@ -46,8 +46,10 @@ impl Compiler {
             }
         }
 
+
         let mut functions = Vec::new();
 
+        debug!("Declaring top level items");
         for token in script.iter() {
             match token {
                 Token::Class(class_name, items) => {
@@ -101,6 +103,7 @@ impl Compiler {
             }
         }
 
+        debug!("Compiling functions");
         for func in functions {
             let fname = func.get_full_name().clone();
             debug!("Compiling function {}", fname);

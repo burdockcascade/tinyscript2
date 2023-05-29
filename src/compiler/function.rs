@@ -1,6 +1,7 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
-use std::env::var;
-use log::{debug, error, info, trace};
+use std::rc::Rc;
+use log::{debug, trace};
 use crate::compiler::compiler::CLASS_CONSTRUCTOR_FUNCTION_NAME;
 use crate::compiler::token::Token;
 use crate::compiler::variable::Variable;
@@ -103,9 +104,9 @@ impl Function {
             Token::ForEach(item, array, stmts) => self.compile_foreach(item, array, stmts),
             Token::Return(expr) => self.compile_return(expr),
             Token::ForI(start, end, step, stmts) => self.compile_forloop(start, end, step, stmts),
-            Token::Chain(start, chain) => self.compile_chain(start, chain),
+            Token::DotChain(start, chain) => self.compile_chain(start, chain),
             Token::Comment(_) => {},
-            _ => todo!("statement: {:?}", statement)
+            _ => unimplemented!("statement not implemented: {:?}", statement)
         }
     }
 
@@ -125,29 +126,30 @@ impl Function {
             match item {
                 Token::Identifier(name) => {
                     self.instructions.push(Instruction::StackPush(Value::String(name.to_string())));
-                    self.instructions.push(Instruction::GetKeyValue)
+                    self.instructions.push(Instruction::GetCollectionItemByKey);
                 },
-                Token::Call(name, args) => {
-
-                    // load the object member
-                    trace!("loading object member {:?}", name);
-                    self.instructions.push(Instruction::StackPush(Value::String(name.to_string())));
-                    self.instructions.push(Instruction::GetKeyValue);
-
-                    // push 'this' onto stack
-                    let variable = self.get_variable(start.to_string());
-                    self.instructions.push(Instruction::LoadLocalVariable(variable.index));
-
-                    // compile the arguments
-                    for arg in args {
-                        self.compile_expression(arg);
-                    }
-
-                    // call the function
-                    trace!("calling function with {} args", args.len());
-                    self.instructions.push(Instruction::Call(args.len() + 1));
-
-                },
+                Token::Call(name, args) => self.compile_call(name, args),
+                // Token::Call(name, args) => {
+                //
+                //     // load the object member
+                //     trace!("loading object member {:?}", name);
+                //     self.instructions.push(Instruction::StackPush(Value::String(name.to_string())));
+                //     self.instructions.push(Instruction::GetKeyValue);
+                //
+                //     // push 'this' onto stack
+                //     let variable = self.get_variable(start.to_string());
+                //     self.instructions.push(Instruction::LoadLocalVariable(variable.index));
+                //
+                //     // compile the arguments
+                //     for arg in args {
+                //         self.compile_expression(arg);
+                //     }
+                //
+                //     // call the function
+                //     trace!("calling function with {} args", args.len());
+                //     self.instructions.push(Instruction::Call(args.len() + 1));
+                //
+                // },
                 _ => unreachable!("chain item is not a variable or index")
             }
 
@@ -197,6 +199,30 @@ impl Function {
                 self.instructions.push(Instruction::MoveToLocalVariable(slot));
             },
 
+            Token::DotChain(start, mut chain) => {
+
+                // remove last item from chain
+                let last_item = chain.pop().expect("chain to have at least one item");
+
+                self.compile_chain(&start, chain.as_slice());
+                self.compile_expression(right);
+
+                match last_item {
+                    Token::Identifier(name) => {
+                        self.instructions.push(Instruction::StackPush(Value::String(name.to_string())));
+                        self.instructions.push(Instruction::SetCollectionItemByKey);
+                    },
+
+                    // fixme
+                    Token::ArrayIndex(name, index) => {
+                        self.instructions.push(Instruction::StackPush(Value::String(name.to_string())));
+                        self.instructions.push(Instruction::SetCollectionItemByKey);
+                    },
+                    _ => panic!("last item in chain is not a variable or index")
+                }
+
+            },
+
             // store value in array index
             Token::ArrayIndex(name, index) => {
                 trace!("storing value in index {:?} of {}", index, name.to_string());
@@ -212,7 +238,7 @@ impl Function {
                 self.compile_expression(&index.clone());
 
                 // add value to array
-                self.instructions.push(Instruction::SetKeyValue);
+                self.instructions.push(Instruction::SetCollectionItemByKey);
 
                 // update variable
                 self.instructions.push(Instruction::MoveToLocalVariable(slot));
@@ -380,7 +406,7 @@ impl Function {
 
         // load constructor functionref
         self.instructions.push(Instruction::StackPush(Value::String(CLASS_CONSTRUCTOR_FUNCTION_NAME.parse().unwrap())));
-        self.instructions.push(Instruction::GetKeyValue);
+        self.instructions.push(Instruction::GetCollectionItemByKey);
 
         // load object
         self.instructions.push(Instruction::LoadLocalVariable(obj_var));
@@ -441,14 +467,24 @@ impl Function {
 
             Token::Identifier(id) => {
                 trace!("pushing {:?} onto stack", token);
-                let idx = self.get_variable(id.clone()).index;
-                self.instructions.push(Instruction::LoadLocalVariable(idx));
+
+                if self.global_lookup.contains_key(id) {
+                    let idx = self.global_lookup.get(id).unwrap();
+                    self.instructions.push(Instruction::LoadGlobal(*idx));
+                } else if self.variable_declared(id) {
+                    let idx = self.get_variable(id.clone()).index;
+                    self.instructions.push(Instruction::LoadLocalVariable(idx));
+                } else {
+                    panic!("unidentified identifier {}", id);
+                }
+
             }
 
             Token::Array(elements) => {
 
                 // Create empty array
-                self.instructions.push(Instruction::StackPush(Value::Array(vec![])));
+                let ref_array = Rc::new(RefCell::new(vec![]));
+                self.instructions.push(Instruction::StackPush(Value::Array(ref_array)));
 
                 for element in elements {
                     self.compile_expression(element);
@@ -460,7 +496,8 @@ impl Function {
             Token::Dictionary(pairs) => {
 
                 // Create empty array
-                self.instructions.push(Instruction::StackPush(Value::Dictionary(HashMap::default())));
+                let ref_hashmap = Rc::new(RefCell::new(HashMap::default()));
+                self.instructions.push(Instruction::StackPush(Value::Dictionary(ref_hashmap)));
 
                 for pair in pairs {
                     if let Token::KeyValuePair(k, value) = pair {
@@ -485,7 +522,7 @@ impl Function {
                 self.compile_expression(index);
 
                 // get array value
-                self.instructions.push(Instruction::GetKeyValue);
+                self.instructions.push(Instruction::GetCollectionItemByKey);
 
             }
 
@@ -561,7 +598,9 @@ impl Function {
             }
 
             // handle call chain and print debug info
-            Token::Chain(init, chain) => self.compile_chain(init, chain),
+            Token::DotChain(start, chain) => {
+                self.compile_chain(start, chain);
+            },
 
             // handle unreadable token and print what it is
             _ => panic!("unhandled token: {:?}", token),
@@ -582,13 +621,13 @@ impl Function {
         trace!("call to function '{:?}' with {} args", name.to_string(), arg_len);
 
         // push functionref onto stack
-        if self.variables.contains_key(&*name.to_string()) {
+        if self.variable_declared(&*name.to_string()) {
             let index = self.get_variable(name.to_string()).index;
             self.instructions.push(Instruction::LoadLocalVariable(index))
         } else {
             self.instructions.push(Instruction::LoadLocalVariable(0));
             self.instructions.push(Instruction::StackPush(Value::String(name.to_string())));
-            self.instructions.push(Instruction::GetKeyValue);
+            self.instructions.push(Instruction::GetCollectionItemByKey);
             self.instructions.push(Instruction::LoadLocalVariable(0));
             arg_len += 1;
         }
@@ -605,6 +644,26 @@ impl Function {
     fn compile_return(&mut self, expr: &Box<Token>) {
         self.compile_expression(expr);
         self.instructions.push(Instruction::Return(true));
+    }
+
+
+    //==============================================================================================
+    // HELPER FUNCTIONS
+
+    fn global_declared(&self, name: &str) -> bool {
+        self.globals.contains_key(name)
+    }
+
+    fn get_global(&self, name: String) -> usize {
+        if let Some(idx) = self.global_lookup.get(&*name) {
+            *idx
+        } else {
+            panic!("global '{}' does not exist", name);
+        }
+    }
+
+    fn variable_declared(&self, name: &str) -> bool {
+        self.variables.contains_key(name)
     }
 
     // get index of variable or error if it doesn't exist
@@ -630,6 +689,5 @@ impl Function {
         // add variable to list
         self.variables.insert(name.clone(), variable);
     }
-
 
 }

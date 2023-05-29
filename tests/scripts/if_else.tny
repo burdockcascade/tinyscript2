@@ -1,0 +1,9 @@
+class Test {
+    function test() {
+        if 1 == 1 {
+            assert true;
+        } else {
+            assert false;
+        }
+    }
+}

@@ -1,5 +1,6 @@
 class Test {
-    function main() {
+
+    function test() {
 
         var number = 5;
         assert number == 5;

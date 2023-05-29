@@ -1,5 +1,5 @@
 class Test {
-    function main() {
+    function test() {
 
         var float = 3.14;
         assert float == 3.14;
@@ -17,10 +17,10 @@ class Test {
         assert float5 == 11.11;
 
         var floatSum = float + float2 + float3 + float4 + float5;
-        assert floatSum == 37.35;
+        assert floatSum == 37.349999999999994;
 
         var floatAverage = floatSum / 5;
-        assert floatAverage == 7.47;
+        assert floatAverage == 7.469999999999999;
 
     }
 }

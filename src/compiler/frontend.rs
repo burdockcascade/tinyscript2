@@ -26,8 +26,8 @@ parser!(pub grammar parser() for str {
             var() /
             assignment() /
             call() /
-            rtn() /
-            chain()
+            identifier_chain() /
+            rtn()
         ) WHITESPACE() SEMICOLON()+ WHITESPACE() { s }  / expected!("single statement")
 
     // control flow statements without semicolon
@@ -55,11 +55,11 @@ parser!(pub grammar parser() for str {
     { Token::Class(i.to_string(), items) }
 
     // class member call chain
-    rule chain() -> Token
-        = o:chain_item() "." chain:((e:chain_item() {e}) ** ".") { Token::Chain(Box::new(o), chain) }
+    rule identifier_chain() -> Token
+        = i:identifier_chain_item() "." chain:((e:identifier_chain_item() {e}) ** ".") { Token::DotChain(Box::new(i), chain) }
 
-    rule chain_item() -> Token
-        = item:(array_index() / call() / identifier()) { item }
+    rule identifier_chain_item() -> Token
+        = item:( call() / array_index() / identifier()) { item }
 
     // constructor
     rule constructor() -> Token
@@ -109,12 +109,8 @@ parser!(pub grammar parser() for str {
         = left:assignment_left_item() WHITESPACE() "=" WHITESPACE() r:expression() {  Token::Assign(Box::new(left), Box::new(r)) }
         / expected!("variable assignment")
 
-    rule assignment_left() -> Token
-        = o:assignment_left_item() "." chain:((e:assignment_left_item() {e}) ** ".") { Token::Chain(Box::new(o), chain) }
-        / a:assignment_left_item() { a }
-
     rule assignment_left_item() -> Token
-        = item:(chain() / array_index() / identifier()) { item }
+        = item:(array_index() / identifier_chain() / identifier() ) { item }
 
 
     rule if_else() -> Token
@@ -162,17 +158,18 @@ parser!(pub grammar parser() for str {
     rule literal() -> Token
         = f:float() { Token::Float(f) }
         / i:integer() { Token::Integer(i) }
+        / list()
+        / dictionary()
+        / array_index()
         / c:anonfunc() { c }
-        / a:array_index() { a }
         / c:call() { c }
-        / c:chain() { c }
+        / c:identifier_chain() { c }
         / new_object_call()
         / n:null() { n }
         / b:boolean() { b }
         / i:identifier() { i }
         / s:string() { s }
-        / list()
-        / dictionary()
+
 
     rule null() -> Token
         = "null" { Token::Null }
@@ -198,19 +195,19 @@ parser!(pub grammar parser() for str {
         = n:$(['a'..='z' | 'A'..='Z' | '_']['a'..='z' | 'A'..='Z' | '0'..='9' | '_']*) { Token::Identifier(n.to_owned()) }
         / expected!("identifier")
 
+    rule square_index() -> Token
+        = "[" WHITESPACE() e:expression() WHITESPACE() "]" { e }
+
     rule array_index() -> Token
-        = i:identifier() "[" _ e:expression() _ "]" { Token::ArrayIndex(Box::new(i), Box::new(e)) }
-        / expected!("array index")
-
-
+        =  i:identifier() s:square_index() { Token::ArrayIndex(Box::new(i), Box::new(s)) }
 
     rule string() -> Token
         = "\""  n:$([^'"']*) "\""  { Token::String(n.to_owned()) }
 
-    rule integer() -> i32
+    rule integer() -> i64
         = n:$("-"? ['0'..='9']+) { n.parse().unwrap() }
 
-    rule float() -> f32
+    rule float() -> f64
         = n:$("-"? ['0'..='9']+ "." ['0'..='9']+) { n.parse().unwrap() }
 
     rule list() -> Token

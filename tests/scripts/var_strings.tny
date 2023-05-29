@@ -1,6 +1,6 @@
 class Test {
 
-    function main() {
+    function test() {
 
         var  myFirstName = "Sanela";
         assert myFirstName == "Sanela";
