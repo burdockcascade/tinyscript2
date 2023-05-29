@@ -19,8 +19,8 @@ pub enum Token {
     Assign(Box<Token>, Box<Token>),
 
     Null,
-    Integer(i64),
-    Float(f64),
+    Integer(i32),
+    Float(f32),
     Bool(bool),
     String(String),
     Array(Vec<Token>),

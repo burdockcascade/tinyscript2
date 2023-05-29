@@ -243,7 +243,7 @@ impl VM {
                     trace!("got array {:?}", array);
 
                     if let Value::Array(val) = array {
-                        frame.push_value_to_stack(Value::Integer(val.borrow().len() as i64));
+                        frame.push_value_to_stack(Value::Integer(val.borrow().len() as i32));
                     } else {
                         panic!("can not get length on non-array {}", array)
                     }

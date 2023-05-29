@@ -204,10 +204,10 @@ parser!(pub grammar parser() for str {
     rule string() -> Token
         = "\""  n:$([^'"']*) "\""  { Token::String(n.to_owned()) }
 
-    rule integer() -> i64
+    rule integer() -> i32
         = n:$("-"? ['0'..='9']+) { n.parse().unwrap() }
 
-    rule float() -> f64
+    rule float() -> f32
         = n:$("-"? ['0'..='9']+ "." ['0'..='9']+) { n.parse().unwrap() }
 
     rule list() -> Token

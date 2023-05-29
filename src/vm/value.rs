@@ -12,8 +12,8 @@ pub enum Value {
 
     // Values
     Null,
-    Integer(i64),
-    Float(f64),
+    Integer(i32),
+    Float(f32),
     Bool(bool),
     String(String),
     Array(Rc<RefCell<Vec<Value>>>),
@@ -27,9 +27,9 @@ pub enum Value {
 impl Value {
 
     pub fn parse(param: &str) -> Value {
-        match param.parse::<i64>() {
+        match param.parse::<i32>() {
             Ok(num) => Value::Integer(num),
-            Err(_) => match param.parse::<f64>() {
+            Err(_) => match param.parse::<f32>() {
                 Ok(num) => Value::Float(num),
                 Err(_) => match param.parse::<bool>() {
                     Ok(b) => Value::Bool(b),
@@ -74,8 +74,8 @@ impl Sub for Value {
     fn sub(self, rhs: Value) -> <Self as Sub<Value>>::Output {
         match (self, rhs) {
             (Value::Integer(v1), Value::Integer(v2)) => Value::Integer(v1 - v2),
-            (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f64 - v2),
-            (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 - v2 as f64),
+            (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f32 - v2),
+            (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 - v2 as f32),
             (Value::Float(v1), Value::Float(v2)) => Value::Float(v1 - v2),
             _ => unreachable!("can not subtract values")
         }
@@ -93,11 +93,11 @@ impl Add for Value {
 
             // add integers together
             (Value::Integer(v1), Value::Integer(v2)) => Value::Integer(v1 + v2),
-            (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f64 + v2),
+            (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f32 + v2),
             (Value::Integer(v1), Value::String(v2)) => Value::String(v1.to_string().add(&*v2)),
 
             // add floats together
-            (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 + v2 as f64),
+            (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 + v2 as f32),
             (Value::Float(v1), Value::Float(v2)) => Value::Float(v1 + v2),
 
             // add strings together
@@ -127,8 +127,8 @@ impl Mul for Value {
     fn mul(self, rhs: Value) -> <Self as Mul<Value>>::Output {
         match (self, rhs) {
             (Value::Integer(v1), Value::Integer(v2)) => Value::Integer(v1 * v2),
-            (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f64 * v2),
-            (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 * v2 as f64),
+            (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f32 * v2),
+            (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 * v2 as f32),
             (Value::Float(v1), Value::Float(v2)) => Value::Float(v1 * v2),
             _ => unreachable!("can not multiply values")
         }
@@ -142,8 +142,8 @@ impl Div for Value {
     fn div(self, rhs: Value) -> <Self as Div<Value>>::Output {
         match (self, rhs) {
             (Value::Integer(v1), Value::Integer(v2)) => Value::Integer(v1 / v2),
-            (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f64 / v2),
-            (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 / v2 as f64),
+            (Value::Integer(v1), Value::Float(v2)) => Value::Float(v1 as f32 / v2),
+            (Value::Float(v1), Value::Integer(v2)) => Value::Float(v1 / v2 as f32),
             (Value::Float(v1), Value::Float(v2)) => Value::Float(v1 / v2),
             _ => unreachable!("can not divide values")
         }
