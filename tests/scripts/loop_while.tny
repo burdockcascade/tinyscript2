@@ -1,0 +1,12 @@
+class Test {
+    function test() {
+        var b = 0;
+
+        // while loop
+        while (b < 10) {
+            assert b >= 0;
+            assert b < 10;
+            b = b + 1;
+        }
+    }
+}

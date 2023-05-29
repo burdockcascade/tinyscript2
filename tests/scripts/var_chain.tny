@@ -1,0 +1,39 @@
+class Test {
+
+    function main() {
+
+        var dict = {
+            "a": {
+                "b": {
+                    "f": ["red", "green", "blue"],
+                    "c": {
+                        "d": 2,
+                        "x": 3
+                    }
+                }
+            }
+        };
+
+        assert dict.a.b.c.d == 2;
+        assert dict.a.b.c.x == 3;
+
+        dict.a.b.c.d = 4;
+        assert dict.a.b.c.d == 4;
+
+        dict.a.b.c.x = { "name": "peter" };
+        assert dict.a.b.c.x.name == "peter";
+
+        dict.a.b.c.x.name = "thomas";
+        assert dict.a.b.c.x.name == "thomas";
+
+        var nd = Test.newdict();
+        assert nd.new1 == 2;
+
+    }
+
+    function newdict() {
+        return { "new1" : 1, "new2" : 2 };
+    }
+
+
+}
